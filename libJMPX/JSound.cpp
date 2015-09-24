@@ -36,11 +36,10 @@ void TJCSound::PopulateDevices()
 			if(RtAudioDevices[dev].probed)
 			{
 
-                qDebug()<<dev;
+                /*qDebug()<<dev;
                 qDebug()<<RtAudioDevices[dev].name.c_str();
                 qDebug()<<"inputChannels="<<RtAudioDevices[dev].inputChannels;
-                qDebug()<<"outputChannels="<<RtAudioDevices[dev].outputChannels;
-
+                qDebug()<<"outputChannels="<<RtAudioDevices[dev].outputChannels;*/
 
                 Device[Devices.NumberOfDevices].dev=dev;
 				Device[Devices.NumberOfDevices].name=RtAudioDevices[dev].name.c_str();
