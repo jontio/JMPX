@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <file>text-speak.png</file>
+    </qresource>
+</RCC>
