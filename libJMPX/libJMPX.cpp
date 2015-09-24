@@ -127,7 +127,7 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int Size)
 
 	for(int i=0;i<(Size-1);i+=2)
 	{
-		pWaveTable->WTnextFrame();
+        pWaveTable->WTnextFrame();
 
         lval=DataIn[i];
         rval=DataIn[i+1];

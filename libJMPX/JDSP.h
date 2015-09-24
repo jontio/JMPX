@@ -82,7 +82,7 @@ class PreEmphasis
 private:
 	double a[2];
 	double b[2];
-	double y[2];
+    double y[2];
 	double x[2];
 public:
 	enum TimeConstant {WORLD,USA,NONE};

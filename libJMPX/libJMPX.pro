@@ -33,7 +33,11 @@ SOURCES += libJMPX.cpp \
     ../rtaudio-4.1.1/RtAudio.cpp \
     ../kiss_fft130/tools/kiss_fastfir.c \
     ../kiss_fft130/kiss_fft.c \
-    ../kiss_fft130/tools/kiss_fftr.c
+    ../kiss_fft130/tools/kiss_fftr.c \
+    JDSP.cpp \
+    JSound.cpp \
+    libJMPX.cpp \
+    ../rtaudio-4.1.1/RtAudio.cpp
 
 HEADERS += libJMPX.h \
     Definitions.h \
@@ -45,7 +49,13 @@ HEADERS += libJMPX.h \
     ../kiss_fft130/tools/kiss_fastfir.h \
     ../kiss_fft130/_kiss_fft_guts.h \
     ../kiss_fft130/kiss_fft.h \
-    ../kiss_fft130/kissfft.hh
+    ../kiss_fft130/kissfft.hh \
+    Definitions.h \
+    JDSP.h \
+    JMPXInterface.h \
+    JSound.h \
+    libJMPX.h \
+    ../rtaudio-4.1.1/RtAudio.h
 
 
 contains(DEFINES, __WINDOWS_DS__) {
@@ -79,4 +89,6 @@ DISTFILES += \
     ../kiss_fft130/TIPS \
     ../kiss_fft130/CHANGELOG \
     ../kiss_fft130/COPYING \
+    ../rtaudio-4.1.1/readme \
+    LICENSE \
     ../rtaudio-4.1.1/readme
