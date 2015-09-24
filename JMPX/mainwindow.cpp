@@ -2,7 +2,6 @@
 #include "ui_mainwindow.h"
 
 #include <QDebug>
-#include <QThread>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -14,8 +13,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->rvolumemeter->setDirection(Volumemeter::Vertical);
     ui->outvolumemeter->setDirection(Volumemeter::Vertical);
 
-    QLibrary library("../build-libJMPX-Desktop_64bit_MinGW-Release/release/libJMPX");
-    //QLibrary library("libJMPX");
+    QLibrary library("libJMPX");
+    if (!library.load())library.setFileName("../build-libJMPX-Desktop_64bit_MinGW-Release/release/libJMPX");//for me
     if (!library.load())
     {
         qDebug() << library.errorString();
@@ -91,7 +90,7 @@ void MainWindow::on_checkBox_stateChanged(int state)
     {
         pJMPX->SetSampleRate(192000);
         pJMPX->SetSoundCard(ui->comboBox->currentIndex()-1);//-1 cos added a default item to the combobox
-        pJMPX->SetBufferFrames(8096*3/2);//adjust this for latency or for lost frames
+        pJMPX->SetBufferFrames(8096);//adjust this for latency or for lost frames
     }
 
     pJMPX->Active(state);
