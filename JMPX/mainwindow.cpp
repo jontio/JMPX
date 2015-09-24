@@ -13,8 +13,11 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->rvolumemeter->setDirection(Volumemeter::Vertical);
     ui->outvolumemeter->setDirection(Volumemeter::Vertical);
 
-    QLibrary library("libJMPX");
+    QLibrary library;
     if (!library.load())library.setFileName("../build-libJMPX-Desktop_64bit_MinGW-Release/release/libJMPX");//for me
+    if (!library.load())library.setFileName(QApplication::applicationDirPath()+"/liblibJMPX");
+    if (!library.load())library.setFileName(QApplication::applicationDirPath()+"/libJMPX");
+    if (!library.load())library.setFileName("libJMPX");
     if (!library.load())
     {
         qDebug() << library.errorString();
