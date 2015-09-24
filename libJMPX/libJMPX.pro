@@ -55,15 +55,15 @@ contains(DEFINES, __WINDOWS_WASAPI__) {
 }
 
 contains(DEFINES, __UNIX_JACK__) {
-    LIBS += libjack libpthread
+    LIBS += -ljack -lpthread
 }
 
 contains(DEFINES, __LINUX_PULSE__) {
-    LIBS += libpthread libpulse-simple libpulse
+    LIBS += -lpthread -lpulse-simple -lpulse
 }
 
 contains(DEFINES, __LINUX_ALSA__ ) {
-    LIBS += libasound libpthread
+    LIBS += -lasound -lpthread
 }
 
 unix {
