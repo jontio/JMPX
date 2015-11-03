@@ -27,8 +27,9 @@ DISTFILES += \
     myappico.ico \
     LICENSE \
     myapp.rc \
-    screenshot-linux.png \
-    screenshot-win.png
+    ../README.md \
+    images/screenshot-linux.png \
+    images/screenshot-win.png
 
 RC_FILE = myapp.rc
 
