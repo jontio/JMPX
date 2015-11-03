@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include <QSettings>
 #include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -13,8 +14,13 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->rvolumemeter->setDirection(Volumemeter::Vertical);
     ui->outvolumemeter->setDirection(Volumemeter::Vertical);
 
+    //create options dialog.
+    options = new Options(this);
+
+    //load library
     QLibrary library;
     if (!library.load())library.setFileName("../build-libJMPX-Desktop_64bit_MinGW-Release/release/libJMPX");//for me
+    if (!library.load())library.setFileName("../build-libJMPX-Desktop_Qt_5_5_0_MinGW_32bit-Release/release/libJMPX");//me too
     if (!library.load())library.setFileName(QApplication::applicationDirPath()+"/liblibJMPX");
     if (!library.load())library.setFileName(QApplication::applicationDirPath()+"/libJMPX");
     if (!library.load())library.setFileName("libJMPX");
@@ -30,47 +36,39 @@ MainWindow::MainWindow(QWidget *parent) :
         pJMPX = createJMPX(this);
         if(pJMPX)
         {
-            pJMPX->SetPreEmphasis(WORLD);
-            SDevices* pdev=pJMPX->GetDevices();
-            ui->comboBox->clear();
-            ui->comboBox->addItem("Default");
-            for(unsigned int i=0;i<pdev->NumberOfDevices;i++)
-            {
-                ui->comboBox->addItem(pdev->Device[i].name);
-            }
-            if(!pdev->NumberOfDevices)ui->comboBox->addItem("None");
+            pJMPX->SetSampleRate(192000);
+            pJMPX->SetBufferFrames(8096);//adjust this for latency or for lost frames
         }
          else QMessageBox::critical(this,"Error","<p><b>Error loading JMPX library.</b></p><p>Failed to create device</p>");
     }
+
+    //load settings
+    if(pJMPX)options->loadsettings(pJMPX);
+
+    //update low rate info
+    updatelowrateinfo();
+
+    //display update init
     ptimer= new QTimer(this);
     ptimer->setInterval(20);
     connect(ptimer,SIGNAL(timeout()),this,SLOT(updatedisplay()));
 
+    //song title checker
+    nowplaying=new NowPlaying(this);
+    connect(nowplaying,SIGNAL(songtitlechanged(QString)),this,SLOT(songtitlecheck(QString)));
 
-    //thanks doqtor for this solution to text overflow of qcomboboxes
-    //determinge the maximum width required to display all names in full
-    int max_width = 0;
-    QFontMetrics fm(ui->comboBox->font());
-    for(int x = 0; x < ui->comboBox->count(); ++x)
-    {
-        int width = fm.width(ui->comboBox->itemText(x));
-        if(width > max_width)
-            max_width = width;
-    }
-    if(ui->comboBox->view()->minimumWidth() < max_width)
-    {
-        // add scrollbar width and margin
-        max_width += ui->comboBox->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
-        max_width += ui->comboBox->view()->autoScrollMargin();
-        // set the minimum width of the combobox drop down list
-        ui->comboBox->view()->setMinimumWidth(max_width);
-    }
-
+    //restore modulate enable
+    QSettings settings("JontiSoft", "JMPX");
+    ui->checkBox_modulate->setChecked(settings.value("checkBox_modulate",false).toBool());
 
 }
 
 MainWindow::~MainWindow()
 {
+    //save settings
+    if(pJMPX)options->savesettings(pJMPX);
+    QSettings settings("JontiSoft", "JMPX");
+    settings.setValue("checkBox_modulate",ui->checkBox_modulate->isChecked());
     delete ui;
 }
 
@@ -86,43 +84,6 @@ void MainWindow::changeEvent(QEvent *e)
     }
 }
 
-void MainWindow::on_checkBox_stateChanged(int state)
-{
-    if(!pJMPX)return;
-    if((!pJMPX->IsActive())&&(state))
-    {
-        pJMPX->SetSampleRate(192000);
-        pJMPX->SetSoundCard(ui->comboBox->currentIndex()-1);//-1 cos added a default item to the combobox
-        pJMPX->SetBufferFrames(8096);//adjust this for latency or for lost frames
-    }
-
-    pJMPX->Active(state);
-    if((state)&&(pJMPX->GotError()))
-    {
-        QMessageBox msgBox;
-        msgBox.setText(pJMPX->GetLastRTAudioError());
-        msgBox.exec();
-        state=false;
-    }
-    pJMPX->EnableStereo(ui->checkBox_2->isChecked());
-
-    if(ui->radionone->isChecked())pJMPX->SetPreEmphasis(NONE);
-     else if(ui->radio50->isChecked())pJMPX->SetPreEmphasis(WORLD);
-      else if(ui->radio75->isChecked())pJMPX->SetPreEmphasis(USA);
-
-    if(state)ptimer->start();
-     else ptimer->stop();
-     ui->lvolumemeter->setVolume(0);
-     ui->rvolumemeter->setVolume(0);
-     ui->outvolumemeter->setVolume(0);
-}
-
-void MainWindow::on_checkBox_2_stateChanged(int state)
-{
-    if(!pJMPX)return;
-    pJMPX->EnableStereo(state);
-}
-
 void MainWindow::updatedisplay()
 {
     if(!pJMPX)return;
@@ -132,26 +93,84 @@ void MainWindow::updatedisplay()
     ui->outvolumemeter->setVolume(psigstats->outvol);
 }
 
-void MainWindow::on_radio50_clicked()
+void MainWindow::on_action_Options_triggered()
 {
     if(!pJMPX)return;
-    pJMPX->SetPreEmphasis(WORLD);
+    options->populatesettings(pJMPX);
+    if(options->exec()==QDialog::Accepted)
+    {
+        options->pushsetting(pJMPX);
+
+        ui->checkBox_modulate->setChecked(pJMPX->IsActive());
+        songtitlecheck(nowplaying->rt_title);
+    }
+    updatelowrateinfo();
 }
 
-void MainWindow::on_radio75_clicked()
+void MainWindow::updatelowrateinfo()
 {
     if(!pJMPX)return;
-    pJMPX->SetPreEmphasis(USA);
+    if(pJMPX->GetEnableStereo())ui->label_stereo->setPixmap(QPixmap(":/images/stereo-on.png"));
+     else ui->label_stereo->setPixmap(QPixmap(":/images/stereo-off.png"));
+    if(pJMPX->GetEnableRDS())ui->label_rds->setPixmap(QPixmap(":/images/RDS-on.png"));
+     else ui->label_rds->setPixmap(QPixmap(":/images/RDS-off.png"));
 }
 
-void MainWindow::on_radionone_clicked()
+void MainWindow::on_checkBox_modulate_stateChanged(int state)
 {
     if(!pJMPX)return;
-    pJMPX->SetPreEmphasis(NONE);
+    if((!pJMPX->IsActive())&&(state))
+    {
+        pJMPX->SetSampleRate(192000);
+        pJMPX->SetBufferFrames(8096);//adjust this for latency or for lost frames
+    }
+    pJMPX->Active(state);
+    if((state)&&(pJMPX->GotError()))
+    {
+        QMessageBox msgBox;
+        msgBox.setText(pJMPX->GetLastRTAudioError());
+        msgBox.exec();
+        state=false;
+        pJMPX->Active(false);
+    }
+    if(state)ptimer->start();
+     else ptimer->stop();
+    ui->lvolumemeter->setVolume(0);
+    ui->rvolumemeter->setVolume(0);
+    ui->outvolumemeter->setVolume(0);
+
+    if(state)songtitlecheck(nowplaying->rt_title);
+
 }
 
-void MainWindow::on_comboBox_currentIndexChanged(int index)
+void MainWindow::on_action_About_triggered()
 {
-    if(!pJMPX)return;
-    pJMPX->SetSoundCard(index-1);
+    QMessageBox::about(this,"JMPX",""
+                                     "<H1>Stereo and RDS encoder for FM transmitters</H1>"
+                                     "<H3>v2.0.0</H3>"
+                                     "<p>When connected to an FM transmitter via a soundcard this program allows you to transmit in stereo along with the ability to send information using RDS (Radio Data System) to the listeners. With RDS the listerners can see what your station is called and other usefull information.</p>"
+                                     "<p>For more information about this application see <a href=\"http://jontio.zapto.org/hda1/paradise/jmpxencoder/jmpx.html\">http://jontio.zapto.org/hda1/paradise/jmpxencoder/jmpx.html</a>.</p>"
+                                     "<p>Jonti 2015</p>" );
+}
+
+void MainWindow::on_actionAbout_Qt_triggered()
+{
+    QApplication::aboutQt();
+}
+
+void MainWindow::songtitlecheck(const QString &title)
+{
+    if((!pJMPX)||!pJMPX.data()->IsActive())return;
+
+    //does the user want us to update rt with title?
+    if(!options->update_rt_music_title)
+    {
+        pJMPX->RDS_SetRT("");
+        return;
+    }
+
+    if(title!=pJMPX->RDS_GetRT())qDebug()<<"Updated RT to song title: "<<title;
+
+    //set RT with title
+    pJMPX->RDS_SetRT(title);
 }

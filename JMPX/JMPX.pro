@@ -3,16 +3,24 @@
 # -------------------------------------------------
 
 QT       += core gui
+
+#needed for MPRIS2 (now playing class on linux)
+unix {
+QT       += dbus
+}
+
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = JMPX
 TEMPLATE = app
 
 RESOURCES += \
-    icons.qrc
+    icons.qrc \
+    jmpx.qrc
 
 FORMS += \
-    mainwindow.ui
+    mainwindow.ui \
+    options.ui
 
 DISTFILES += \
     text-speak.png \
@@ -25,11 +33,27 @@ RC_FILE = myapp.rc
 HEADERS += \
     mainwindow.h \
     vol/volumemeter.h \
-    ../libJMPX/JMPXInterface.h
+    ../libJMPX/JMPXInterface.h \
+    options.h
 
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
-    vol/volumemeter.cpp
+    vol/volumemeter.cpp \
+    options.cpp
 
+unix {
+HEADERS += nowplaying_linux.h
+SOURCES += nowplaying_linux.cpp
+}
+
+win32 {
+HEADERS += nowplaying_windows.h
+SOURCES += nowplaying_windows.cpp
+}
+
+macx {
+HEADERS += nowplaying_mac.h
+SOURCES += nowplaying_mac.cpp
+}
 

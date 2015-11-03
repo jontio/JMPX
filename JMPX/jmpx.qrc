@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/application-exit.png</file>
+        <file>images/settings.png</file>
+        <file>images/RDS-on.png</file>
+        <file>images/stereo-on.png</file>
+        <file>images/RDS-off.png</file>
+        <file>images/stereo-off.png</file>
+    </qresource>
+</RCC>

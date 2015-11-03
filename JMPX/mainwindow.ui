@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>254</width>
-    <height>233</height>
+    <width>236</width>
+    <height>225</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -21,13 +21,74 @@
    <bool>true</bool>
   </property>
   <widget class="QWidget" name="centralWidget">
+   <widget class="QCheckBox" name="checkBox_modulate">
+    <property name="geometry">
+     <rect>
+      <x>130</x>
+      <y>160</y>
+      <width>90</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Modulate</string>
+    </property>
+   </widget>
+   <widget class="QGroupBox" name="groupBox_2">
+    <property name="geometry">
+     <rect>
+      <x>60</x>
+      <y>2</y>
+      <width>41</width>
+      <height>191</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Out</string>
+    </property>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="0" column="0">
+        <widget class="Volumemeter" name="outvolumemeter" native="true">
+         <property name="volume" stdset="0">
+          <double>0.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QLabel" name="label_rds">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>120</x>
+      <y>52</y>
+      <width>101</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="pixmap">
+     <pixmap resource="jmpx.qrc">:/images/RDS-off.png</pixmap>
+    </property>
+    <property name="scaledContents">
+     <bool>true</bool>
+    </property>
+   </widget>
    <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
-      <x>20</x>
+      <x>10</x>
       <y>2</y>
       <width>41</width>
-      <height>221</height>
+      <height>191</height>
      </rect>
     </property>
     <property name="title">
@@ -54,129 +115,121 @@
      </item>
     </layout>
    </widget>
-   <widget class="QGroupBox" name="groupBox_2">
+   <widget class="QToolButton" name="toolButton_options">
     <property name="geometry">
      <rect>
-      <x>70</x>
-      <y>2</y>
-      <width>41</width>
-      <height>221</height>
-     </rect>
-    </property>
-    <property name="title">
-     <string>Out</string>
-    </property>
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
-      <layout class="QGridLayout" name="gridLayout_2">
-       <item row="0" column="0">
-        <widget class="Volumemeter" name="outvolumemeter" native="true">
-         <property name="volume" stdset="0">
-          <double>0.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QCheckBox" name="checkBox">
-    <property name="geometry">
-     <rect>
-      <x>140</x>
-      <y>10</y>
-      <width>90</width>
-      <height>23</height>
+      <x>150</x>
+      <y>103</y>
+      <width>40</width>
+      <height>40</height>
      </rect>
     </property>
     <property name="text">
-     <string>Modulate</string>
+     <string>...</string>
+    </property>
+    <property name="icon">
+     <iconset resource="jmpx.qrc">
+      <normaloff>:/images/settings.png</normaloff>:/images/settings.png</iconset>
+    </property>
+    <property name="iconSize">
+     <size>
+      <width>40</width>
+      <height>40</height>
+     </size>
+    </property>
+    <property name="autoRaise">
+     <bool>true</bool>
     </property>
    </widget>
-   <widget class="QCheckBox" name="checkBox_2">
+   <widget class="QLabel" name="label_stereo">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
     <property name="geometry">
      <rect>
-      <x>140</x>
-      <y>40</y>
-      <width>90</width>
-      <height>23</height>
+      <x>120</x>
+      <y>12</y>
+      <width>101</width>
+      <height>41</height>
      </rect>
     </property>
     <property name="text">
-     <string>Stereo</string>
+     <string/>
     </property>
-   </widget>
-   <widget class="QGroupBox" name="groupBox_3">
-    <property name="geometry">
-     <rect>
-      <x>130</x>
-      <y>70</y>
-      <width>111</width>
-      <height>111</height>
-     </rect>
+    <property name="pixmap">
+     <pixmap resource="jmpx.qrc">:/images/stereo-off.png</pixmap>
     </property>
-    <property name="title">
-     <string>Pre-Emphasis</string>
+    <property name="scaledContents">
+     <bool>true</bool>
     </property>
-    <widget class="QRadioButton" name="radio50">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>28</y>
-       <width>91</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>50us</string>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
-    </widget>
-    <widget class="QRadioButton" name="radio75">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>54</y>
-       <width>91</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>75us</string>
-     </property>
-    </widget>
-    <widget class="QRadioButton" name="radionone">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>80</y>
-       <width>91</width>
-       <height>19</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>None</string>
-     </property>
-    </widget>
-   </widget>
-   <widget class="QComboBox" name="comboBox">
-    <property name="geometry">
-     <rect>
-      <x>130</x>
-      <y>192</y>
-      <width>111</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <item>
-     <property name="text">
-      <string>None</string>
-     </property>
-    </item>
    </widget>
   </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>236</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="nativeMenuBar">
+    <bool>true</bool>
+   </property>
+   <widget class="QMenu" name="menu_File">
+    <property name="title">
+     <string>&amp;File</string>
+    </property>
+    <addaction name="actionE_xit"/>
+   </widget>
+   <widget class="QMenu" name="menu_Tools">
+    <property name="title">
+     <string>&amp;Tools</string>
+    </property>
+    <addaction name="action_Options"/>
+   </widget>
+   <widget class="QMenu" name="menu_Help">
+    <property name="title">
+     <string>&amp;Help</string>
+    </property>
+    <addaction name="action_About"/>
+    <addaction name="actionAbout_Qt"/>
+   </widget>
+   <addaction name="menu_File"/>
+   <addaction name="menu_Tools"/>
+   <addaction name="menu_Help"/>
+  </widget>
+  <action name="actionE_xit">
+   <property name="icon">
+    <iconset resource="jmpx.qrc">
+     <normaloff>:/images/application-exit.png</normaloff>:/images/application-exit.png</iconset>
+   </property>
+   <property name="text">
+    <string>E&amp;xit</string>
+   </property>
+  </action>
+  <action name="action_Options">
+   <property name="icon">
+    <iconset resource="jmpx.qrc">
+     <normaloff>:/images/settings.png</normaloff>:/images/settings.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Options</string>
+   </property>
+  </action>
+  <action name="action_About">
+   <property name="text">
+    <string>&amp;About</string>
+   </property>
+   <property name="iconVisibleInMenu">
+    <bool>false</bool>
+   </property>
+  </action>
+  <action name="actionAbout_Qt">
+   <property name="text">
+    <string>About Qt</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
@@ -187,7 +240,41 @@
   </customwidget>
  </customwidgets>
  <resources>
+  <include location="jmpx.qrc"/>
   <include location="icons.qrc"/>
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>actionE_xit</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>128</x>
+     <y>133</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toolButton_options</sender>
+   <signal>clicked()</signal>
+   <receiver>action_Options</receiver>
+   <slot>trigger()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>179</x>
+     <y>154</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

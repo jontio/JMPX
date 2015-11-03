@@ -6,6 +6,8 @@
 #include "JDSP.h"
 #include "JSound.h"
 
+#include "rds.h"
+
 class JMPXEncoder : public JMPXInterface
 {
      Q_OBJECT
@@ -20,6 +22,7 @@ private:
     std::auto_ptr< WaveTable > pWaveTable;
 
     bool stereo;
+    bool RDS_enabled;
 
     TSigStats sigstats;
 
@@ -33,13 +36,79 @@ private:
     double outbigval;
     int decl;
 
+    RDS *rds;
+
+    QString rt_default;
+    QString rt_dynamic;
+
+    double monolevel;
+    double level38k;
+    bool compositeclipper;
+
 public:
 
-    void EnableStereo(bool enable);
+    void SetEnableStereo(bool enable);
+    bool GetEnableStereo();
 
     void Active(bool Enabled);
     bool IsActive(){return pJCSound->IsActive();}
 
+
+
+    QString GetSoundCardInName()
+    {
+        for(unsigned int device=0;device<pJCSound->Devices.NumberOfDevices;device++)
+        {
+            if(pJCSound->Devices.Device[device].dev==pJCSound->iParameters.deviceId)
+            {
+                return ((QString)pJCSound->Devices.Device[device].name);
+            }
+        }
+        return ("None");
+    }
+    QString GetSoundCardOutName()
+    {
+        for(unsigned int device=0;device<pJCSound->Devices.NumberOfDevices;device++)
+        {
+            if(pJCSound->Devices.Device[device].dev==pJCSound->oParameters.deviceId)
+            {
+                return ((QString)pJCSound->Devices.Device[device].name);
+            }
+        }
+        return ("None");
+    }
+    bool SetSoundCardInName(const QString &name)
+    {
+        int firstindevice=-1;
+        for(unsigned int device=0;device<pJCSound->Devices.NumberOfDevices;device++)
+        {
+            if(pJCSound->Devices.Device[device].inchannelcount==0)continue;
+            if(firstindevice<0)firstindevice=device;
+            if(((QString)pJCSound->Devices.Device[device].name)==name)
+            {
+                SetSoundCardIn(device);
+                return true;
+            }
+        }
+        SetSoundCardIn(firstindevice);
+        return false;
+    }
+    bool SetSoundCardOutName(const QString &name)
+    {
+        int firstindevice=-1;
+        for(unsigned int device=0;device<pJCSound->Devices.NumberOfDevices;device++)
+        {
+            if(pJCSound->Devices.Device[device].outchannelcount==0)continue;
+            if(firstindevice<0)firstindevice=device;
+            if(((QString)pJCSound->Devices.Device[device].name)==name)
+            {
+                SetSoundCardOut(device);
+                return true;
+            }
+        }
+        SetSoundCardOut(firstindevice);
+        return false;
+    }
     void SetSoundCardDefault(){SetSoundCardIn(-1);SetSoundCardOut(-1);}
     void SetSoundCard(int device){SetSoundCardIn(device);SetSoundCardOut(device);}
     void SetSoundCardIn(int device)
@@ -52,10 +121,20 @@ public:
         if(device<0)pJCSound->oParameters.deviceId=pJCSound->AnRtAudio.getDefaultOutputDevice();
          else pJCSound->oParameters.deviceId=device;
     }
+    int GetSoundCardIn()
+    {
+        return pJCSound->iParameters.deviceId;
+    }
+    int GetSoundCardOut()
+    {
+        return pJCSound->oParameters.deviceId;
+    }
+
     void SetSampleRate(int sampleRate){pJCSound->sampleRate=sampleRate;}
     void SetBufferFrames(int bufferFrames){pJCSound->bufferFrames=bufferFrames;}
 
     void SetPreEmphasis(TimeConstant timeconst);
+    TimeConstant GetPreEmphasis();
 
     bool GotError(){return pJCSound->GotError;}
     const char* GetLastRTAudioError(){pJCSound->GotError=false;return pJCSound->LastErrorMessage.data();}
@@ -64,13 +143,86 @@ public:
 
     SDevices* GetDevices(void)
     {
+        pJCSound->PopulateDevices();
         return &pJCSound->Devices;
     }
+
+    void SetEnableCompositeClipper(bool enable){compositeclipper=enable;}
+    bool GetEnableCompositeClipper(){return compositeclipper;}
+    void SetMonoLevel(double value){monolevel=value;}
+    double GetMonoLevel(){return monolevel;}
+    void Set38kLevel(double value){level38k=value;}
+    double Get38kLevel(){return level38k;}
+
+    //RDS interface to implimentation start
+
+    void SetEnableRDS(bool enable);
+    bool GetEnableRDS();
+
+    void RDS_SetPI(int pi){rds->set_pi((quint16)pi);}
+    int RDS_GetPI(){return rds->get_pi();}
+
+    void RDS_SetPS(const QString &ps){rds->set_ps(ps);}
+    QString RDS_GetPS(){return rds->get_ps();}
+
+    void RDS_SetDefaultRT(const QString &rt)
+    {
+        rt_default=rt;
+        if(rt_dynamic.isEmpty())rds->set_rt(rt_default);
+    }
+    QString RDS_GetDefaultRT(){return rt_default;}
+    void RDS_SetRT(const QString &rt)
+    {
+        rt_dynamic=rt;
+        if(rt_dynamic.isEmpty())rds->set_rt(rt_default);
+         else rds->set_rt(rt_dynamic);
+    }
+    QString RDS_GetRT(){return rds->get_rt();}
+
+    void RDS_SetPTY(int pty){rds->set_pty((RDS::pty_type)pty);}
+    int RDS_GetPTY(){return (int)rds->get_pty();}
+
+    void RDS_Set_DI_Stereo(bool enable){rds->set_stereo(enable);}
+    bool RDS_Get_DI_Stereo(){return rds->get_stereo();}
+    void RDS_Set_DI_Compressed(bool enable){rds->set_compressed(enable);}
+    bool RDS_Get_DI_Compressed(){return rds->get_compressed();}
+    void RDS_Set_DI_Artificial_Head(bool enable){rds->set_artificial_head(enable);}
+    bool RDS_Get_DI_Artificial_Head(){return rds->get_artificial_head();}
+    void RDS_Set_DI_Dynamic_PTY(bool enable){rds->set_dynamic_pty(enable);}
+    bool RDS_Get_DI_Dynamic_PTY(){return rds->get_dynamic_pty();}
+
+    void RDS_Set_TP(bool enable){rds->set_tp(enable);}
+    bool RDS_Get_TP(){return rds->get_tp();}
+    void RDS_Set_CT(bool enable){rds->ct_enabled=enable;}
+    bool RDS_Get_CT(){return rds->ct_enabled;}    
+    void RDS_Set_MS(bool enable){rds->set_ms(enable);}
+    bool RDS_Get_MS(){return rds->get_ms();}
+    void RDS_Set_TA(bool enable){rds->set_ta(enable);}
+    bool RDS_Get_TA(){return rds->get_ta();}
+
+    void RDS_Set_RBDS(bool enable){rds->rbds=enable;}
+    bool RDS_Get_RBDS(){return rds->rbds;}
+
+    void RDS_Set_RT_Enable(bool enable){rds->set_rt_enable(enable);}
+    bool RDS_Get_RT_Enable(){return rds->get_rt_enable();}
+
+    void RDS_Set_clocktimeoffset(int offset_in_groups){rds->clocktimeoffset=offset_in_groups;}
+    int RDS_Get_clocktimeoffset(){return rds->clocktimeoffset;}
+
+    double RDS_Get_altfreq1(){return rds->get_altfreq1();}
+    void RDS_Set_altfreq1(double freq){rds->set_altfreq1(freq);}
+
+    double RDS_Get_altfreq2(){return rds->get_altfreq2();}
+    void RDS_Set_altfreq2(double freq){rds->set_altfreq2(freq);}
+
+    //RDS interface to implimentation stop
+
 private slots:
     void Update(double *DataIn,double *DataOut, int Size);
 private:
-    //FIRFilter ltfir,rtfir;//old method (slow fir)
-    InterleavedStereo16500Hz192000bpsFilter stereofir;//new method (fast fir)
+    InterleavedStereo16500Hz192000bpsFilter stereofir;//fast fir LPF
+private slots:
+
 };
 
 #endif	// LIBJMPX_H

@@ -9,6 +9,19 @@
 
 #include "../libJMPX/JMPXInterface.h"
 
+#include "options.h"
+
+#ifdef Q_OS_WIN
+#include "nowplaying_windows.h"
+#endif
+#ifdef Q_OS_LINUX
+#include "nowplaying_linux.h"
+#endif
+#ifdef Q_OS_MAC
+#include "nowplaying_mac.h"
+#endif
+
+
 namespace Ui {
     class MainWindow;
 }
@@ -18,23 +31,22 @@ class MainWindow : public QMainWindow {
 public:
     MainWindow(QWidget *parent = 0);
     ~MainWindow();
-
 protected:
     void changeEvent(QEvent *e);
-
 private:
     Ui::MainWindow *ui;
     QPointer<JMPXInterface> pJMPX;
     QTimer *ptimer;
-
+    Options *options;
+    void updatelowrateinfo();
+    NowPlaying  *nowplaying;
 private slots:
-    void on_comboBox_currentIndexChanged(int index);
-    void on_radionone_clicked();
-    void on_radio75_clicked();
-    void on_radio50_clicked();
-    void on_checkBox_2_stateChanged(int );
-    void on_checkBox_stateChanged(int );
     void updatedisplay();
+    void on_action_Options_triggered();
+    void on_checkBox_modulate_stateChanged(int state);
+    void on_action_About_triggered();
+    void on_actionAbout_Qt_triggered();
+    void songtitlecheck(const QString &title);
 };
 
 #endif // MAINWINDOW_H

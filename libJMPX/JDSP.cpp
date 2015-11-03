@@ -5,6 +5,18 @@
 
 //---------------------------------------------------------------------------
 
+SymbolPointer::SymbolPointer()
+{
+    setFreq(2375,192000);
+}
+
+void  SymbolPointer::setFreq(double freqHZ,double samplerate)
+{
+        symbolstep=(freqHZ)*((double)WTSIZE)/(samplerate);
+        symbolptr=0;
+}
+
+//----------------------
 
 
  WaveTable::WaveTable(TDspGen *_pDspGen) :
@@ -32,7 +44,7 @@ void WaveTable::WTnextFrame()
 	WTptr+=WTstep;
 	while(!signbit(WTptr-(double)WTSIZE))WTptr-=(double)(WTSIZE);
 	if(signbit(WTptr))WTptr=0;
-	intWTptr=(int)WTptr;intWTptr%=WTSIZE;
+    intWTptr=(int)WTptr;
 }
 
 double   WaveTable::WTSinValue()
@@ -47,11 +59,26 @@ double   WaveTable::WTSin2Value()
     	if(signbit(tmpwtptr))tmpwtptr=0;
 		return pDspGen->SinWT[(int)tmpwtptr];
 }
+
+double   WaveTable::WTSin3Value()
+{
+        double tmpwtptr=WTptr*3.0;
+        while(!signbit(tmpwtptr-(double)WTSIZE))tmpwtptr-=(double)(WTSIZE);
+        if(signbit(tmpwtptr))tmpwtptr=0;
+        return pDspGen->SinWT[(int)tmpwtptr];
+}
+
 //----------
 
-void PreEmphasis::SetTc(TimeConstant timeconst)
+TimeConstant PreEmphasis::GetTc()
 {
-	switch(timeconst)
+    return timeconst;
+}
+
+void PreEmphasis::SetTc(TimeConstant _timeconst)
+{
+    timeconst=_timeconst;
+    switch(timeconst)
 	{
 	case WORLD:
 	    a[0] = 5.309858008l;
@@ -79,7 +106,7 @@ void PreEmphasis::SetTc(TimeConstant timeconst)
 
 PreEmphasis::PreEmphasis()
 {
-	SetTc(WORLD);
+    SetTc(WORLD);
 }
 
 double PreEmphasis::Update(double val)
@@ -92,35 +119,37 @@ double PreEmphasis::Update(double val)
 	return retval;
 }
 
+//----------
+
 Clipper::Clipper()
 {
-	SetCompressionPoint(0.85l);
+    SetCompressionPoint(0.85);
 }
 
 void Clipper::SetCompressionPoint(double point)
 {
-	if(point>0.99l)point=0.99l;
-	 else if(point<0.01l)point=0.01l;
+    if(point>0.99)point=0.99;
+     else if(point<0.01)point=0.01;
 	compressionpoint=point;
-	double a=M_PI/(2.0l*(1.0l-compressionpoint));
+    double a=M_PI/(2.0*(1.0-compressionpoint));
 	LookupTable.resize(6000);
 	for(int i=0;i<(int)LookupTable.size();i++)
 	{
-		LookupTable[i]=compressionpoint+atan(a*(i*0.001l))/a;
+        LookupTable[i]=compressionpoint+atan(a*(i*0.001))/a;
 	}
 }
 
 double Clipper::Update(double val)
 {
 	if(fabs(val)<compressionpoint)return val;
-	double inv=1.0l;
-	if(val<0.0l)
+    double inv=1.0;
+    if(val<0.0)
 	{
-		inv=-1.0l;
+        inv=-1.0;
 		val=-val;
 	}
 
-	double shiftmultval=(val-compressionpoint)*1000.0l;
+    double shiftmultval=(val-compressionpoint)*1000.0;
 	int n=(int)(shiftmultval);
 	int q=n+1;
 	if(q>=(int)LookupTable.size())return inv;
@@ -229,9 +258,7 @@ void FIRFilter::UpdateInterleavedOdd(double *data,int Size)
 
 }
 
-
 //-----
-
 
  TDspGen::TDspGen(TSetGen *_pSetGen) :
         pSetGen(_pSetGen)
@@ -254,16 +281,19 @@ void  TDspGen::ResetSettings()
         Freq=pSetGen->Freq;
 }
 
-
-
-//---------------
-
-
 //---fast FIR
-
 
 FastFIRFilter::FastFIRFilter(std::vector<kffsamp_t> &imp_responce,size_t &_nfft)
 {
+    cfg=kiss_fastfir_alloc(imp_responce.data(),imp_responce.size(),&_nfft,0,0);
+    nfft=_nfft;
+    reset();
+}
+
+FastFIRFilter::FastFIRFilter(std::vector<kffsamp_t> &imp_responce)
+{
+    size_t _nfft=imp_responce.size()*4;//rule of thumb
+    _nfft=pow(2.0,(ceil(log2(_nfft))));
     cfg=kiss_fastfir_alloc(imp_responce.data(),imp_responce.size(),&_nfft,0,0);
     nfft=_nfft;
     reset();
@@ -348,7 +378,6 @@ FastFIRFilter::~FastFIRFilter()
 
 //-----------
 
-
 FastFIRFilterInterleavedStereo::FastFIRFilterInterleavedStereo(std::vector<kffsamp_t> &imp_responce,size_t &nfft)
 {
     left=new FastFIRFilter(imp_responce,nfft);
@@ -387,3 +416,87 @@ void FastFIRFilterInterleavedStereo::Update(kffsamp_t *data,int Size)
         j++;
     }
 }
+
+//------------
+
+//---- RRC Filter kernel
+
+RootRaisedCosine::RootRaisedCosine()
+{
+
+}
+
+RootRaisedCosine::RootRaisedCosine(double symbolrate, int firsize, double alpha, double samplerate)
+{
+    create(symbolrate,firsize,alpha,samplerate);
+}
+
+void RootRaisedCosine::scalepoints(double scale)
+{
+    for(uint k=0;k<Points.size();k++)Points[k]*=scale;
+}
+
+void  RootRaisedCosine::create(double symbolrate, int firsize, double alpha, double samplerate)
+{
+    if((firsize%2)==0)firsize-=1;
+    Points.resize(firsize);
+    double h;
+    double squaresum=0;
+
+    unsigned int k=0;
+    for(int i=-firsize/2;i<=firsize/2;i++)
+    {
+        double t=((double)i)/samplerate;
+
+        double delta=fabs(fabs(t)-(1.0/(4.0*alpha*symbolrate)));
+        if(i)
+        {
+            if(delta>0.000001)
+            {
+                h= \
+                  sqrt(symbolrate)* \
+                  (sin(M_PI*t*symbolrate*(1.0-alpha))+4.0*alpha*t*symbolrate*cos(M_PI*t*symbolrate*(1.0+alpha))) \
+                        / \
+                  (M_PI*t*symbolrate*(1.0-(4.0*alpha*t*symbolrate*4.0*alpha*t*symbolrate)));
+            }
+             else
+             {
+                h=(alpha*sqrt(symbolrate/2.0))* \
+                        ( \
+                            (1.0+2.0/M_PI)*sin(M_PI/(4.0*alpha))\
+                            +\
+                            (1.0-2.0/M_PI)*cos(M_PI/(4.0*alpha))\
+                         );
+             }
+        }
+         else h=sqrt(symbolrate)*(1.0-alpha+4.0*alpha/M_PI);
+
+        squaresum+=(h*h);
+
+        if(k>=Points.size())abort();
+        Points[k]=h;k++;
+
+       // printf("i=%d t=%f delta=%f h=%f\n",i,t,delta,h*0.050044661);
+    }
+
+    double normalizeor=1.0/(sqrt(squaresum));//found in textbooks
+    //double normalizeor=1.0/(sqrt(symbolrate)*(1.0-alpha+4.0*alpha/M_PI));//makes the main peak equal to one
+    for(k=0;k<Points.size();k++)Points[k]*=normalizeor;
+
+  //  for(k=0;k<Points.size();k++)Points[k]*=0.5*(1.0-cos(2.0*M_PI*k/((double)(Points.size()-1))));
+
+    // printf("normalization = %f\n",1.0/(sqrt(squaresum)));
+
+    /*k=0;
+    for(int i=-firsize/2;i<=firsize/2;i++)
+    {
+        double t=((double)i)/samplerate;
+        if(k>=Points.size())abort();
+        printf("i=%d t=%f h=%f\n",i,t,Points[k]);
+        k++;
+    }*/
+
+}
+
+//-----
+

@@ -54,7 +54,34 @@ public:
         int SampleRate;
 };
 
+//------------------
 
+class SymbolPointer
+{
+public:
+    SymbolPointer();
+    void setFreq(double freqHZ,double samplerate);
+    inline void nextFrame()
+    {
+        symbolptr+=symbolstep;
+        while(!signbit(symbolptr-(double)WTSIZE))symbolptr-=(double)(WTSIZE);
+        if(signbit(symbolptr))symbolptr=0;
+    }
+    inline bool ifPassesPointNextTime()
+    {
+        FractionOfSampleItPassesBy=-symbolptr;
+        while(signbit(FractionOfSampleItPassesBy))FractionOfSampleItPassesBy+=(double)WTSIZE;
+        if(signbit(FractionOfSampleItPassesBy-symbolstep))
+        {
+            FractionOfSampleItPassesBy=(symbolstep-FractionOfSampleItPassesBy)/symbolstep;
+            return true;
+        }
+        return false;
+    }
+    double FractionOfSampleItPassesBy;
+private:
+    double symbolstep,symbolptr;
+};
 
 //------------------
 
@@ -67,6 +94,7 @@ public:
         void WTnextFrame();
         double   WTSinValue();
         double   WTSin2Value();
+        double   WTSin3Value();
         void  RefreshSettings();
 private:
         double WTstep;
@@ -84,10 +112,11 @@ private:
 	double b[2];
     double y[2];
 	double x[2];
+    TimeConstant timeconst;
 public:
-	enum TimeConstant {WORLD,USA,NONE};
 	PreEmphasis();
 	void SetTc(TimeConstant timeconst);
+    TimeConstant GetTc();
 	double Update(double val);
 };
 
@@ -103,6 +132,7 @@ public:
 
 };
 
+//------------
 
 class Cof_16500Hz_192000bps_119taps
 {
@@ -115,8 +145,7 @@ public:
     }
 };
 
-
-//slow fir
+//---------slow fir
 
 class FIRFilter
 {
@@ -137,12 +166,13 @@ public:
     }
 };
 
-//fast fir
+//---------fast fir
 
 class FastFIRFilter
 {
 public:
     FastFIRFilter(std::vector<kffsamp_t> &imp_responce,size_t &nfft);
+    FastFIRFilter(std::vector<kffsamp_t> &imp_responce);
     int Update(kffsamp_t *data,int Size);
     void reset();
     ~FastFIRFilter();
@@ -157,7 +187,7 @@ public:
 
 };
 
-//stereo fast fir
+//---------stereo fast fir
 
 class FastFIRFilterInterleavedStereo
 {
@@ -178,7 +208,7 @@ private:
 
 };
 
-//stereo fast fir for 16.5kHz at 192000 bps
+//----------stereo fast fir for 16.5kHz at 192000 bps
 class InterleavedStereo16500Hz192000bpsFilter
 {
 public:
@@ -198,6 +228,22 @@ private:
     FastFIRFilterInterleavedStereo *fir;
 };
 
+//-----RRC Filter kernel
+
+class RootRaisedCosine
+{
+public:
+    RootRaisedCosine();
+    RootRaisedCosine(double symbolrate, int firsize, double alpha, double samplerate);
+    void create(double symbolrate, int firsize, double alpha, double samplerate);
+    void scalepoints(double scale);
+    vector<double> Points;
+};
+
+
+//-----RDS Biphase symbol generator
+
+//-----
 
 
 #endif  //JDSP_H

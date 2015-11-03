@@ -15,9 +15,6 @@ void Volumemeter::paintEvent(QPaintEvent *)
 {
     paintBorder();
     paintBar();
-
-
-
 }
 
 void Volumemeter::paintBorder()

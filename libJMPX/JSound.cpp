@@ -45,6 +45,8 @@ void TJCSound::PopulateDevices()
 				Device[Devices.NumberOfDevices].name=RtAudioDevices[dev].name.c_str();
 				Device[Devices.NumberOfDevices].SampleRates=&RtAudioDevices[dev].sampleRates[0];
 				Device[Devices.NumberOfDevices].NumberOfSampleRates=RtAudioDevices[dev].sampleRates.size();
+                Device[Devices.NumberOfDevices].inchannelcount=RtAudioDevices[dev].inputChannels;
+                Device[Devices.NumberOfDevices].outchannelcount=RtAudioDevices[dev].outputChannels;
 				Devices.NumberOfDevices++;
 			}
 		}

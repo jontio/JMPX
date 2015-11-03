@@ -18,6 +18,8 @@ struct SDeviceInfo
 	const char* name;
 	unsigned int* SampleRates;
 	unsigned int NumberOfSampleRates;
+    unsigned int inchannelcount;
+    unsigned int outchannelcount;
 };
 
 struct SDevices

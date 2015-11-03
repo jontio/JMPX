@@ -1,9 +1,5 @@
 #include "libJMPX.h"
-
-#include <QObject>
 #include <QDebug>
-
-#include <QFile>
 
 JMPXEncoder::JMPXEncoder(QObject *parent):
     JMPXInterface(parent),
@@ -11,22 +7,24 @@ JMPXEncoder::JMPXEncoder(QObject *parent):
 	pWaveTable( new WaveTable(pTDspGen.get()))
 {
 	stereo=true;
+    RDS_enabled=true;
 	decl=0;
-	lbigval=0.0l;
-	rbigval=0.0l;
-	outbigval=0.0l;
-	sigstats.lvol=0.0l;
-	sigstats.rvol=0.0l;
-	sigstats.outvol=0.0l;
+    lbigval=0.0;
+    rbigval=0.0;
+    outbigval=0.0;
+    sigstats.lvol=0.0;
+    sigstats.rvol=0.0;
+    sigstats.outvol=0.0;
 
     pJCSound = new TJCSound(this);
     pJCSound->sampleRate=192000;
     pJCSound->bufferFrames=8096;
 
-    //old method (slow fir)
-    //Cof_16500Hz_192000bps_119taps lpfc;
-    //ltfir.Cof=lpfc.Cof;
-    //rtfir.Cof =lpfc.Cof;
+    rds = new RDS(this);
+
+    compositeclipper=true;
+    monolevel=0.9;
+    level38k=1.0;
 
 }
 
@@ -47,18 +45,34 @@ void JMPXEncoder::Active(bool Enabled)
 
             pTDspGen->ResetSettings();
             pWaveTable->RefreshSettings();
+            rds->reset();
 
-            lpreemp.SetTc(PreEmphasis::WORLD);
-            rpreemp.SetTc(PreEmphasis::WORLD);
+            rt_dynamic.clear();
+            rds->set_rt(rt_default);
 
             connect(pJCSound,SIGNAL(SoundEvent(double*,double*,int)),this,SLOT(Update(double*,double*,int)),Qt::DirectConnection);//DirectConnection!!!
         }
         pJCSound->Active(Enabled);
 }
 
-void JMPXEncoder::EnableStereo(bool enable)
+void JMPXEncoder::SetEnableStereo(bool enable)
 {
 	stereo=enable;
+}
+
+bool JMPXEncoder::GetEnableStereo()
+{
+    return stereo;
+}
+
+void JMPXEncoder::SetEnableRDS(bool enable)
+{
+    RDS_enabled=enable;
+}
+
+bool JMPXEncoder::GetEnableRDS()
+{
+    return RDS_enabled;
 }
 
 TSigStats* JMPXEncoder::GetSignalStats()
@@ -66,10 +80,15 @@ TSigStats* JMPXEncoder::GetSignalStats()
 	return &sigstats;
 }
 
+TimeConstant JMPXEncoder::GetPreEmphasis()
+{
+    return (TimeConstant)lpreemp.GetTc();
+}
+
 void JMPXEncoder::SetPreEmphasis(TimeConstant timeconst)
 {
-	lpreemp.SetTc((PreEmphasis::TimeConstant)timeconst);
-	rpreemp.SetTc((PreEmphasis::TimeConstant)timeconst);
+    lpreemp.SetTc(timeconst);
+    rpreemp.SetTc(timeconst);
 }
 
 //WARING called from another thread for speed reasons.
@@ -77,22 +96,24 @@ void JMPXEncoder::SetPreEmphasis(TimeConstant timeconst)
 void JMPXEncoder::Update(double *DataIn,double *DataOut, int Size)
 {
 
+    if(Size<2)return;
+
     double rval;
 	double lval;
 
-    //low pass filter first about 16.5Khz is standard
+    //rds generation
+    rds->FIRFilterImpulses(Size/2);// div by 2 cos Size is the number of sample left and right so div by 2 --> number of mono samples
 
-    //old method (slow fir)
-    //ltfir.UpdateInterleavedEven(DataIn,Size);
-    //rtfir.UpdateInterleavedOdd(DataIn,Size);
-
-    //new method (fast fir)
+    //low pass filter. about 16.5Khz is standard
+    //fast fir
     stereofir.Update(DataIn,Size);
 
 	if(!stereo)
 	{
 		for(int i=0;i<(Size-1);i+=2)
-		{	
+        {
+
+            pWaveTable->WTnextFrame();
 
             lval=DataIn[i];
             rval=DataIn[i+1];
@@ -103,11 +124,12 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int Size)
             lval=clipper.Update(lval);
             rval=clipper.Update(rval);
 
-			DataOut[i]=0.5*(lval+rval);
-			DataOut[i+1]=DataOut[i];
+            DataOut[i]=monolevel*0.608*(lval+rval);//sum at 0Hz
+            if(RDS_enabled)DataOut[i]+=0.06*pWaveTable->WTSin3Value()*rds->outputsignal[i/2];//RDS at 57kHz
+            if(compositeclipper)DataOut[i]=clipper.Update(DataOut[i]);
 
-			if(fabs(DataIn[i])>lbigval)lbigval=fabs(DataIn[i]);
-			if(fabs(DataIn[i+1])>rbigval)rbigval=fabs(DataIn[i+1]);
+            if(fabs(DataIn[i])>lbigval)lbigval=fabs(DataIn[i]);
+            if(fabs(DataIn[i+1])>rbigval)rbigval=fabs(DataIn[i+1]);
 			if(fabs(DataOut[i])>outbigval)outbigval=fabs(DataOut[i]);
 			decl++;
 			if(!(decl%=5000))
@@ -121,11 +143,13 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int Size)
                 outbigval=0.0;
 			}
 
+            DataOut[i+1]=DataOut[i];
+
 		}
 		return;
 	}
 
-	for(int i=0;i<(Size-1);i+=2)
+    for(int i=0;i<(Size-1);i+=2)
 	{
         pWaveTable->WTnextFrame();
 
@@ -135,14 +159,16 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int Size)
         lval=lpreemp.Update(lval*0.5);
         rval=rpreemp.Update(rval*0.5);
 
-		lval=clipper.Update(lval);
-		rval=clipper.Update(rval);
+        lval=clipper.Update(lval);
+        rval=clipper.Update(rval);
 
-		DataOut[i]=0.45*(lval+rval);
-        DataOut[i]+=0.09*pWaveTable->WTSinValue();
-        DataOut[i]+=0.45*(pWaveTable->WTSin2Value())*(lval-rval);
+        DataOut[i]=monolevel*0.608*(lval+rval);//sum at 0Hz
+        DataOut[i]+=level38k*0.608*(pWaveTable->WTSin2Value())*(lval-rval);//diff at 38kHz
+        DataOut[i]+=0.08*pWaveTable->WTSinValue();//19kHz pilot (8%)
+        if(RDS_enabled)DataOut[i]+=0.06*pWaveTable->WTSin3Value()*rds->outputsignal[i/2];//RDS at 57kHz (6%)
+        if(compositeclipper)DataOut[i]=clipper.Update(DataOut[i]);
 
-		if(fabs(DataIn[i])>lbigval)lbigval=fabs(DataIn[i]);
+        if(fabs(DataIn[i])>lbigval)lbigval=fabs(DataIn[i]);
 		if(fabs(DataIn[i+1])>rbigval)rbigval=fabs(DataIn[i+1]);
 		if(fabs(DataOut[i])>outbigval)outbigval=fabs(DataOut[i]);
 		decl++;
@@ -157,7 +183,7 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int Size)
             outbigval=0.0;
 		}
 
-		DataOut[i+1]=DataOut[i];
+        DataOut[i+1]=DataOut[i];
 	}
 }
 

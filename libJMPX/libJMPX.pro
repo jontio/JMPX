@@ -16,6 +16,9 @@ DEFINES += JMPX_LIBRARY \
         REAL_FASTFIR \
         "kiss_fft_scalar=double"
 
+#You dont need all these audio APIs.
+#Say if you want only jack then remove __LINUX_PULSE__ and __LINUX_ALSA__ leaving just DEFINES += __UNIX_JACK__
+#I have never compiled on mac so if you have let me know if anything should be changed
 win32 {
     DEFINES += __WINDOWS_DS__
     #  not sure what the advantages for WASAPI is over DS DEFINES += __WINDOWS_WASAPI__
@@ -25,6 +28,10 @@ unix {
             __LINUX_PULSE__ \
             __LINUX_ALSA__
 }
+macx {
+    DEFINES += __MACOSX_CORE__ \
+            __UNIX_JACK__
+}
 
 SOURCES += libJMPX.cpp \
     JSound.cpp \
@@ -32,7 +39,8 @@ SOURCES += libJMPX.cpp \
     ../rtaudio-4.1.1/RtAudio.cpp \
     ../kiss_fft130/tools/kiss_fastfir.c \
     ../kiss_fft130/kiss_fft.c \
-    ../kiss_fft130/tools/kiss_fftr.c
+    ../kiss_fft130/tools/kiss_fftr.c \
+    rds.cpp
 
 HEADERS += libJMPX.h \
     Definitions.h \
@@ -43,7 +51,8 @@ HEADERS += libJMPX.h \
     ../kiss_fft130/tools/kiss_fftr.h \
     ../kiss_fft130/tools/kiss_fastfir.h \
     ../kiss_fft130/_kiss_fft_guts.h \
-    ../kiss_fft130/kiss_fft.h
+    ../kiss_fft130/kiss_fft.h \
+    rds.h
 
 
 contains(DEFINES, __WINDOWS_DS__) {
@@ -64,6 +73,11 @@ contains(DEFINES, __LINUX_PULSE__) {
 
 contains(DEFINES, __LINUX_ALSA__ ) {
     LIBS += -lasound -lpthread
+}
+
+#are these the right things to link with for coreaudio?
+contains(DEFINES, __MACOSX_CORE__ ) {
+    LIBS += -lCoreAudio -lpthread
 }
 
 unix {
