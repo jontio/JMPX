@@ -1,4 +1,4 @@
-#JMPX
+#JMPX v2
 A Stereo encoder for FM transmitters now with RDS support.
 
 ![Screenshot of JMPX on Linux](JMPX/images/screenshot-linux.png)
