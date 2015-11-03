@@ -15,7 +15,6 @@ TARGET = JMPX
 TEMPLATE = app
 
 RESOURCES += \
-    icons.qrc \
     jmpx.qrc
 
 FORMS += \
@@ -23,7 +22,6 @@ FORMS += \
     options.ui
 
 DISTFILES += \
-    text-speak.png \
     myappico.ico \
     LICENSE \
     myapp.rc \

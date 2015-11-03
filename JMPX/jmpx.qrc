@@ -6,5 +6,6 @@
         <file>images/stereo-on.png</file>
         <file>images/RDS-off.png</file>
         <file>images/stereo-off.png</file>
+        <file>images/text-speak.png</file>
     </qresource>
 </RCC>

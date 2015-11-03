@@ -14,8 +14,8 @@
    <string>JMPX</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="icons.qrc">
-    <normaloff>:/text-speak.png</normaloff>:/text-speak.png</iconset>
+   <iconset resource="jmpx.qrc">
+    <normaloff>:/images/text-speak.png</normaloff>:/images/text-speak.png</iconset>
   </property>
   <property name="documentMode">
    <bool>true</bool>
@@ -241,7 +241,6 @@
  </customwidgets>
  <resources>
   <include location="jmpx.qrc"/>
-  <include location="icons.qrc"/>
  </resources>
  <connections>
   <connection>
