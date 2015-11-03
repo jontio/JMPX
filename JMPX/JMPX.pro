@@ -26,7 +26,9 @@ DISTFILES += \
     text-speak.png \
     myappico.ico \
     LICENSE \
-    myapp.rc
+    myapp.rc \
+    screenshot-linux.png \
+    screenshot-win.png
 
 RC_FILE = myapp.rc
 
