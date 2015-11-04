@@ -37,6 +37,9 @@ private:
         vector<SDeviceInfo> Device;
         vector<RtAudio::DeviceInfo> RtAudioDevices;
 
+        bool SetSoundCardInByName();
+        bool SetSoundCardOutByName();
+
 public:
         void Active(bool State);
         bool IsActive();
@@ -49,6 +52,8 @@ public:
     	RtAudio::StreamParameters oParameters,iParameters;
     	unsigned int sampleRate;
     	unsigned int bufferFrames;
+        QString wantedInDeviceName;
+        QString wantedOutDeviceName;
 
         RtAudio::StreamOptions options;
 

@@ -148,7 +148,7 @@ void Options::loadsettings(JMPXInterface *pJMPX)
     pJMPX->RDS_SetPI(settings.value("RDS_PI",0x9000).toInt());
 
     //rt default
-    pJMPX->RDS_SetDefaultRT(settings.value("RDS_RT_defaultoo","RT test text").toString());
+    pJMPX->RDS_SetDefaultRT(settings.value("RDS_RT_default","RT test text").toString());
 
     //pty
     pJMPX->RDS_SetPTY(settings.value("RDS_PTY",0).toInt());

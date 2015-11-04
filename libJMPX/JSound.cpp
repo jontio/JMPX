@@ -8,6 +8,8 @@
 
         GotError=false;
 
+        options.streamName="JMPX";
+
         oParameters.deviceId = AnRtAudio.getDefaultOutputDevice();
         oParameters.nChannels = 2;
         oParameters.firstChannel = 0;
@@ -47,6 +49,17 @@ void TJCSound::PopulateDevices()
 				Device[Devices.NumberOfDevices].NumberOfSampleRates=RtAudioDevices[dev].sampleRates.size();
                 Device[Devices.NumberOfDevices].inchannelcount=RtAudioDevices[dev].inputChannels;
                 Device[Devices.NumberOfDevices].outchannelcount=RtAudioDevices[dev].outputChannels;
+
+                //if Jack dont include ourselves
+                if(AnRtAudio.getCurrentApi()==RtAudio::UNIX_JACK)
+                {
+                    if(RtAudioDevices[dev].name==options.streamName)
+                    {
+                        Device[Devices.NumberOfDevices].inchannelcount=0;
+                        Device[Devices.NumberOfDevices].outchannelcount=0;
+                    }
+                }
+
 				Devices.NumberOfDevices++;
 			}
 		}
@@ -60,6 +73,44 @@ void TJCSound::PopulateDevices()
 	if(GotError)throw(LastErrorMessage.c_str());
 }
 
+bool TJCSound::SetSoundCardInByName()
+{
+    if(wantedInDeviceName.isEmpty())return false;
+    int firstindevice=-1;
+    for(unsigned int device=0;device<Devices.NumberOfDevices;device++)
+    {
+        if(Devices.Device[device].inchannelcount==0)continue;
+        if(firstindevice<0)firstindevice=device;
+        if(((QString)Devices.Device[device].name)==wantedInDeviceName)
+        {
+            iParameters.deviceId=device;
+            return true;
+        }
+    }
+    if(firstindevice<0)iParameters.deviceId=AnRtAudio.getDefaultInputDevice();
+     else iParameters.deviceId=firstindevice;
+    return false;
+}
+
+bool TJCSound::SetSoundCardOutByName()
+{
+    if(wantedOutDeviceName.isEmpty())return false;
+    int firstindevice=-1;
+    for(unsigned int device=0;device<Devices.NumberOfDevices;device++)
+    {
+        if(Devices.Device[device].outchannelcount==0)continue;
+        if(firstindevice<0)firstindevice=device;
+        if(((QString)Devices.Device[device].name)==wantedOutDeviceName)
+        {
+            oParameters.deviceId=device;
+            return true;
+        }
+    }
+    if(firstindevice<0)oParameters.deviceId=AnRtAudio.getDefaultOutputDevice();
+     else oParameters.deviceId=firstindevice;
+    return false;
+}
+
 void TJCSound::Active(bool State)
 {
 	try
@@ -67,6 +118,12 @@ void TJCSound::Active(bool State)
 		if(AnRtAudio.isStreamOpen()==State)return;
         if(State)
         {
+
+            //names can change id number
+            PopulateDevices();
+            SetSoundCardInByName();
+            SetSoundCardOutByName();
+
         	if(bufferFrames%2)bufferFrames++; //make sure bufferFrames is even
             AnRtAudio.openStream( &oParameters,  &iParameters, RTAUDIO_FLOAT64,sampleRate, &bufferFrames, Dispatcher, (void *)this, &options );
             AnRtAudio.startStream();

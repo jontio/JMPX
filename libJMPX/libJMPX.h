@@ -87,10 +87,12 @@ public:
             if(((QString)pJCSound->Devices.Device[device].name)==name)
             {
                 SetSoundCardIn(device);
+                pJCSound->wantedInDeviceName=name;
                 return true;
             }
         }
         SetSoundCardIn(firstindevice);
+        pJCSound->wantedInDeviceName=name;
         return false;
     }
     bool SetSoundCardOutName(const QString &name)
@@ -103,10 +105,12 @@ public:
             if(((QString)pJCSound->Devices.Device[device].name)==name)
             {
                 SetSoundCardOut(device);
+                pJCSound->wantedOutDeviceName=name;
                 return true;
             }
         }
         SetSoundCardOut(firstindevice);
+        pJCSound->wantedOutDeviceName=name;
         return false;
     }
     void SetSoundCardDefault(){SetSoundCardIn(-1);SetSoundCardOut(-1);}
@@ -115,11 +119,13 @@ public:
     {
         if(device<0)pJCSound->iParameters.deviceId=pJCSound->AnRtAudio.getDefaultInputDevice();
          else pJCSound->iParameters.deviceId=device;
+        pJCSound->wantedInDeviceName.clear();
     }
     void SetSoundCardOut(int device)
     {
         if(device<0)pJCSound->oParameters.deviceId=pJCSound->AnRtAudio.getDefaultOutputDevice();
          else pJCSound->oParameters.deviceId=device;
+        pJCSound->wantedOutDeviceName.clear();
     }
     int GetSoundCardIn()
     {
