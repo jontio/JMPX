@@ -125,8 +125,27 @@ void TJCSound::Active(bool State)
             SetSoundCardOutByName();
 
         	if(bufferFrames%2)bufferFrames++; //make sure bufferFrames is even
+
+            //10 tries as on JACK sometimes stream wont open first time. Don't know why. This should solve the problem.
+            int i=0;
+            tryagain:
             AnRtAudio.openStream( &oParameters,  &iParameters, RTAUDIO_FLOAT64,sampleRate, &bufferFrames, Dispatcher, (void *)this, &options );
-            AnRtAudio.startStream();
+            i++;
+            try{AnRtAudio.startStream();}
+            catch(RtAudioError& e)
+            {
+                if(i>=10)
+                {
+                    LastErrorMessage=e.getMessage();
+                    GotError=true;
+                }
+                if ( AnRtAudio.isStreamOpen() ) AnRtAudio.closeStream();
+                if(i<10)goto tryagain;
+                return;
+            }
+
+
+
         }
          else
          {

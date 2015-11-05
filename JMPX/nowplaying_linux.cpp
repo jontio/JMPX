@@ -100,9 +100,11 @@ void NowPlaying::updatesongtitle()
     QVariantMap vm=qdbus_cast<QVariantMap>(propreply.value());
     QString artist=vm.value("xesam:artist").toString();
     QString title=vm.value("xesam:title").toString();
+    QString vlcnowplaying=vm.value("vlc:nowplaying").toString();
     QString str;
     if((!artist.isNull())&&(!title.isNull()))str=artist+" - "+title;
     else if(!title.isNull())str=title;
+    if(!vlcnowplaying.isNull())str=vlcnowplaying;
     if(!playing)str.clear();
 
     if(rt_title!=str)
