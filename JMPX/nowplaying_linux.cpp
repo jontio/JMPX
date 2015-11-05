@@ -104,7 +104,7 @@ void NowPlaying::updatesongtitle()
     QString str;
     if((!artist.isNull())&&(!title.isNull()))str=artist+" - "+title;
     else if(!title.isNull())str=title;
-    if(!vlcnowplaying.isNull())str=vlcnowplaying;
+    if((!vlcnowplaying.isNull())&&(!vlcnowplaying.isEmpty()))str=vlcnowplaying;
     if(!playing)str.clear();
 
     if(rt_title!=str)
