@@ -41,6 +41,7 @@ private:
     void updatelowrateinfo();
     NowPlaying  *nowplaying;
 private slots:
+    void volbarssetfixedequalwidth();
     void updatedisplay();
     void on_action_Options_triggered();
     void on_checkBox_modulate_stateChanged(int state);

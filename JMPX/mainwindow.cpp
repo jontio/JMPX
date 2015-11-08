@@ -10,9 +10,11 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     setFixedSize(width(),height());
+
     ui->lvolumemeter->setDirection(Volumemeter::Vertical);
     ui->rvolumemeter->setDirection(Volumemeter::Vertical);
     ui->outvolumemeter->setDirection(Volumemeter::Vertical);
+    QTimer::singleShot(0,this,SLOT(volbarssetfixedequalwidth()));//for some reason the two volume bars a normally one pixel different this sets them the same
 
     //create options dialog.
     options = new Options(this);
@@ -105,6 +107,16 @@ void MainWindow::on_action_Options_triggered()
         songtitlecheck(nowplaying->rt_title);
     }
     updatelowrateinfo();
+}
+
+void MainWindow::volbarssetfixedequalwidth()
+{
+    if(ui->lvolumemeter->width()!=ui->rvolumemeter->width())
+    {
+        int width=max(ui->lvolumemeter->width(),ui->rvolumemeter->width());
+        ui->lvolumemeter->setFixedWidth(width);
+        ui->rvolumemeter->setFixedWidth(width);
+    }
 }
 
 void MainWindow::updatelowrateinfo()
