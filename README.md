@@ -24,7 +24,7 @@ Qt and Qt Creator are recommended.
 
 The transmitter needs to not have any low pass filter on its input from the soundcard. This is so the frequencies above 16kHz actually modulate the transmitter.
 
-For testing it is posible to use a simple one transistor FM transmitter design but signal quality and frequency stablility are likly to be problems.
+For testing it is possible to use a simple one transistor FM transmitter design but signal quality and frequency stability are likely to be problems.
 
 Jonti 2015
 http://jontio.zapto.org
