@@ -82,7 +82,7 @@
        <property name="geometry">
         <rect>
          <x>30</x>
-         <y>310</y>
+         <y>210</y>
          <width>90</width>
          <height>23</height>
         </rect>
@@ -98,7 +98,7 @@
        <property name="geometry">
         <rect>
          <x>30</x>
-         <y>280</y>
+         <y>180</y>
          <width>90</width>
          <height>23</height>
         </rect>
@@ -220,7 +220,7 @@
        <property name="geometry">
         <rect>
          <x>60</x>
-         <y>230</y>
+         <y>310</y>
          <width>221</width>
          <height>20</height>
         </rect>
@@ -235,7 +235,7 @@
        <property name="geometry">
         <rect>
          <x>30</x>
-         <y>190</y>
+         <y>270</y>
          <width>31</width>
          <height>16</height>
         </rect>
@@ -248,7 +248,7 @@
        <property name="geometry">
         <rect>
          <x>60</x>
-         <y>190</y>
+         <y>270</y>
          <width>221</width>
          <height>20</height>
         </rect>
@@ -263,13 +263,103 @@
        <property name="geometry">
         <rect>
          <x>30</x>
-         <y>230</y>
+         <y>310</y>
          <width>31</width>
          <height>16</height>
         </rect>
        </property>
        <property name="text">
         <string>Out</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_pilotlevel">
+       <property name="geometry">
+        <rect>
+         <x>400</x>
+         <y>180</y>
+         <width>51</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>7.0%</string>
+       </property>
+      </widget>
+      <widget class="QSlider" name="horizontalSlider_rdslevel">
+       <property name="geometry">
+        <rect>
+         <x>230</x>
+         <y>209</y>
+         <width>160</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="maximum">
+        <number>100</number>
+       </property>
+       <property name="value">
+        <number>60</number>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_10">
+       <property name="geometry">
+        <rect>
+         <x>140</x>
+         <y>180</y>
+         <width>91</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Pilot level</string>
+       </property>
+      </widget>
+      <widget class="QSlider" name="horizontalSlider_pilotlevel">
+       <property name="geometry">
+        <rect>
+         <x>230</x>
+         <y>179</y>
+         <width>160</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="maximum">
+        <number>100</number>
+       </property>
+       <property name="value">
+        <number>70</number>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_rdslevel">
+       <property name="geometry">
+        <rect>
+         <x>400</x>
+         <y>209</y>
+         <width>51</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>6.0%</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_11">
+       <property name="geometry">
+        <rect>
+         <x>140</x>
+         <y>210</y>
+         <width>81</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>RDS level</string>
        </property>
       </widget>
      </widget>

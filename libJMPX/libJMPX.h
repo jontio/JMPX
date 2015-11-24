@@ -41,6 +41,8 @@ private:
     QString rt_default;
     QString rt_dynamic;
 
+    double pilotlevel;
+    double rdslevel;
     double monolevel;
     double level38k;
     bool compositeclipper;
@@ -159,6 +161,10 @@ public:
     double GetMonoLevel(){return monolevel;}
     void Set38kLevel(double value){level38k=value;}
     double Get38kLevel(){return level38k;}
+    void SetPilotLevel(double value){pilotlevel=value;}
+    double GetPilotLevel(){return pilotlevel;}
+    void SetRDSLevel(double value){rdslevel=value;}
+    double GetRDSLevel(){return rdslevel;}
 
     //RDS interface to implimentation start
 

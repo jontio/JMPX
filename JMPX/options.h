@@ -23,11 +23,10 @@ public:
     bool update_rt_music_title;
 private slots:
     void on_checkBox_rbds_clicked(bool checked);
-
     void on_horizontalSlider_monolevel_valueChanged(int value);
-
     void on_horizontalSlider_38klevel_valueChanged(int value);
-
+    void on_horizontalSlider_pilotlevel_valueChanged(int value);
+    void on_horizontalSlider_rdslevel_valueChanged(int value);
 private:
     Ui::Options *ui;
 };

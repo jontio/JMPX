@@ -53,6 +53,10 @@ public:
     virtual double GetMonoLevel()=0;
     virtual void Set38kLevel(double value)=0;
     virtual double Get38kLevel()=0;
+    virtual void SetPilotLevel(double value)=0;
+    virtual double GetPilotLevel()=0;
+    virtual void SetRDSLevel(double value)=0;
+    virtual double GetRDSLevel()=0;
 
     //--RDS interface
 

@@ -52,6 +52,12 @@ void Options::savesettings(JMPXInterface *pJMPX)
     //set 38k level
     settings.setValue("38kLevel",pJMPX->Get38kLevel());
 
+    //set pilot level
+    settings.setValue("PilotLevel",pJMPX->GetPilotLevel());
+
+    //set rds level
+    settings.setValue("RDSLevel",pJMPX->GetRDSLevel());
+
 //second tab
 
     //rbds
@@ -135,6 +141,12 @@ void Options::loadsettings(JMPXInterface *pJMPX)
 
     //set 38k level
     pJMPX->Set38kLevel(settings.value("38kLevel",1.0).toDouble());
+
+    //set pilot level
+    pJMPX->SetPilotLevel(settings.value("PilotLevel",0.07).toDouble());
+
+    //set rds level
+    pJMPX->SetRDSLevel(settings.value("RDSLevel",0.06).toDouble());
 
 //second tab
 
@@ -284,6 +296,12 @@ void Options::populatesettings(JMPXInterface *pJMPX)
     //set 38level
     ui->horizontalSlider_38klevel->setValue(pJMPX->Get38kLevel()*100.0);
 
+    //set pilotlevel
+    ui->horizontalSlider_pilotlevel->setValue(qRound(pJMPX->GetPilotLevel()*1000.0));
+
+    //set rdslevel
+    ui->horizontalSlider_rdslevel->setValue(qRound(pJMPX->GetRDSLevel()*1000.0));
+
 //second tab
 
     //rbds
@@ -393,6 +411,12 @@ void Options::pushsetting(JMPXInterface *pJMPX)
 
     //set 38level
     pJMPX->Set38kLevel(((double)ui->horizontalSlider_38klevel->value())/100.0);
+
+    //set pilotlevel
+    pJMPX->SetPilotLevel(((double)ui->horizontalSlider_pilotlevel->value())/1000.0);
+
+    //set rdslevel
+    pJMPX->SetRDSLevel(((double)ui->horizontalSlider_rdslevel->value())/1000.0);
 
 //second tab
 
@@ -547,4 +571,14 @@ void Options::on_horizontalSlider_monolevel_valueChanged(int value)
 void Options::on_horizontalSlider_38klevel_valueChanged(int value)
 {
     ui->label_38klevel->setText(((QString)"%1%").arg(value));
+}
+
+void Options::on_horizontalSlider_pilotlevel_valueChanged(int value)
+{
+    ui->label_pilotlevel->setText(((QString)"%1%").arg(((double)value)/10.0,0,'f',1,'0'));
+}
+
+void Options::on_horizontalSlider_rdslevel_valueChanged(int value)
+{
+    ui->label_rdslevel->setText(((QString)"%1%").arg(((double)value)/10.0,0,'f',1,'0'));
 }

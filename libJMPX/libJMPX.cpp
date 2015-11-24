@@ -25,6 +25,8 @@ JMPXEncoder::JMPXEncoder(QObject *parent):
     compositeclipper=true;
     monolevel=0.9;
     level38k=1.0;
+    pilotlevel=0.07;
+    rdslevel=0.06;
 
 }
 
@@ -125,7 +127,7 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int Size)
             rval=clipper.Update(rval);
 
             DataOut[i]=monolevel*0.608*(lval+rval);//sum at 0Hz
-            if(RDS_enabled)DataOut[i]+=0.06*pWaveTable->WTSin3Value()*rds->outputsignal[i/2];//RDS at 57kHz
+            if(RDS_enabled)DataOut[i]+=rdslevel*pWaveTable->WTSin3Value()*rds->outputsignal[i/2];//RDS at 57kHz
             if(compositeclipper)DataOut[i]=clipper.Update(DataOut[i]);
 
             if(fabs(DataIn[i])>lbigval)lbigval=fabs(DataIn[i]);
@@ -164,8 +166,8 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int Size)
 
         DataOut[i]=monolevel*0.608*(lval+rval);//sum at 0Hz
         DataOut[i]+=level38k*0.608*(pWaveTable->WTSin2Value())*(lval-rval);//diff at 38kHz
-        DataOut[i]+=0.08*pWaveTable->WTSinValue();//19kHz pilot (8%)
-        if(RDS_enabled)DataOut[i]+=0.06*pWaveTable->WTSin3Value()*rds->outputsignal[i/2];//RDS at 57kHz (6%)
+        DataOut[i]+=pilotlevel*pWaveTable->WTSinValue();//19kHz pilot
+        if(RDS_enabled)DataOut[i]+=rdslevel*pWaveTable->WTSin3Value()*rds->outputsignal[i/2];//RDS at 57kHz
         if(compositeclipper)DataOut[i]=clipper.Update(DataOut[i]);
 
         if(fabs(DataIn[i])>lbigval)lbigval=fabs(DataIn[i]);
