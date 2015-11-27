@@ -18,6 +18,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //create options dialog.
     options = new Options(this);
+    if(QCoreApplication::arguments().last().toUpper()=="QUIT_ON_ERROR")options->quit_on_error=true;
 
     //load library
     QLibrary library;
@@ -29,6 +30,7 @@ MainWindow::MainWindow(QWidget *parent) :
     if (!library.load())
     {
         qDebug() << library.errorString();
+        if(options->quit_on_error)exit(1);
         QMessageBox::critical(this,"Error","<p><b>Error loading JMPX library.</b></p><p>"+library.errorString()+"</p><p>Note: The JMPX library needs to be placed in the gui's program directory or in system path. On Windows this should be called libJMPX.dll on linux something like libJQAM.so. Please find it and copy it over for JMPX to work.</p>");
     }
     if (library.load())
@@ -41,7 +43,11 @@ MainWindow::MainWindow(QWidget *parent) :
             pJMPX->SetSampleRate(192000);
             pJMPX->SetBufferFrames(8096);//adjust this for latency or for lost frames
         }
-         else QMessageBox::critical(this,"Error","<p><b>Error loading JMPX library.</b></p><p>Failed to create device</p>");
+         else
+         {
+            if(options->quit_on_error){qDebug("Error loading JMPX library: Failed to create device");exit(1);}
+            QMessageBox::critical(this,"Error","<p><b>Error loading JMPX library.</b></p><p>Failed to create device</p>");
+         }
     }
 
     //load settings
@@ -140,6 +146,7 @@ void MainWindow::on_checkBox_modulate_stateChanged(int state)
     if((state)&&(pJMPX->GotError()))
     {
         QMessageBox msgBox;
+        if(options->quit_on_error){qDebug()<<pJMPX->GetLastRTAudioError();exit(1);}
         msgBox.setText(pJMPX->GetLastRTAudioError());
         msgBox.exec();
         state=false;

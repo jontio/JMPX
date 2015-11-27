@@ -11,6 +11,7 @@ Options::Options(QWidget *parent) :
     ui->setupUi(this);
 
     update_rt_music_title=true;
+    quit_on_error=false;
 
     QStringList list;
     list<<"None";
@@ -385,6 +386,7 @@ void Options::pushsetting(JMPXInterface *pJMPX)
         if((orgstate)&&(pJMPX->GotError()))
         {
             QMessageBox msgBox;
+            if(quit_on_error){qDebug()<<pJMPX->GetLastRTAudioError();exit(1);}
             msgBox.setText(pJMPX->GetLastRTAudioError());
             msgBox.exec();
             pJMPX->Active(false);

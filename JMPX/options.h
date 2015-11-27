@@ -21,6 +21,7 @@ public:
     void savesettings(JMPXInterface *pJMPX);
     void loadsettings(JMPXInterface *pJMPX);
     bool update_rt_music_title;
+    bool quit_on_error;
 private slots:
     void on_checkBox_rbds_clicked(bool checked);
     void on_horizontalSlider_monolevel_valueChanged(int value);
