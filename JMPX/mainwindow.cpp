@@ -166,7 +166,7 @@ void MainWindow::on_action_About_triggered()
 {
     QMessageBox::about(this,"JMPX",""
                                      "<H1>Stereo and RDS encoder for FM transmitters</H1>"
-                                     "<H3>v2.0.0</H3>"
+                                     "<H3>v1.2.0</H3>"
                                      "<p>When connected to an FM transmitter via a soundcard this program allows you to transmit in stereo along with the ability to send information using RDS (Radio Data System) to the listeners. With RDS the listerners can see what your station is called and other usefull information.</p>"
                                      "<p>For more information about this application see <a href=\"http://jontio.zapto.org/hda1/paradise/jmpxencoder/jmpx.html\">http://jontio.zapto.org/hda1/paradise/jmpxencoder/jmpx.html</a>.</p>"
                                      "<p>Jonti 2015</p>" );
