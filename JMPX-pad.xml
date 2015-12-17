@@ -1,0 +1,137 @@
+<?xml version="1.0" ?>
+<XML_DIZ_INFO>
+	<MASTER_PAD_VERSION_INFO>
+		<MASTER_PAD_VERSION>3.11</MASTER_PAD_VERSION>
+		<MASTER_PAD_EDITOR>PADGen 3.1.1.51 http://www.padgen.org</MASTER_PAD_EDITOR>
+		<MASTER_PAD_INFO>Portable Application Description, or PAD for short, is a data set that is used by shareware authors to disseminate information to anyone interested in their software products. To find out more go to http://pad.asp-software.org</MASTER_PAD_INFO>
+	</MASTER_PAD_VERSION_INFO>
+	<Company_Info>
+		<Company_Name>Jontisoft</Company_Name>
+		<Address_1>PO BOX 20,000</Address_1>
+		<Address_2>Wellington South</Address_2>
+		<City_Town>Wellington</City_Town>
+		<State_Province />
+		<Zip_Postal_Code />
+		<Country>New Zealand</Country>
+		<Company_WebSite_URL>http://jontio.zapto.org</Company_WebSite_URL>
+		<Contact_Info>
+			<Author_First_Name>Jonathan (Jonti)</Author_First_Name>
+			<Author_Last_Name>Olds</Author_Last_Name>
+			<Author_Email>jontio@i4free.co.nz</Author_Email>
+			<Contact_First_Name>Jonathan (Jonti)</Contact_First_Name>
+			<Contact_Last_Name>Olds</Contact_Last_Name>
+			<Contact_Email>jontio@i4free.co.nz</Contact_Email>
+		</Contact_Info>
+		<Support_Info>
+			<Sales_Email>jontio@i4free.co.nz</Sales_Email>
+			<Support_Email>jontio@i4free.co.nz</Support_Email>
+			<General_Email>jontio@i4free.co.nz</General_Email>
+			<Sales_Phone />
+			<Support_Phone />
+			<General_Phone />
+			<Fax_Phone />
+		</Support_Info>
+	</Company_Info>
+	<Program_Info>
+		<Program_Name>JMPX</Program_Name>
+		<Program_Version>2</Program_Version>
+		<Program_Release_Month>12</Program_Release_Month>
+		<Program_Release_Day>18</Program_Release_Day>
+		<Program_Release_Year>2015</Program_Release_Year>
+		<Program_Cost_Dollars />
+		<Program_Cost_Other_Code />
+		<Program_Cost_Other />
+		<Program_Type>Freeware</Program_Type>
+		<Program_Release_Status>New Release</Program_Release_Status>
+		<Program_Install_Support>Install and Uninstall</Program_Install_Support>
+		<Program_OS_Support>Linux,Win7 x32,Win7 x64,Other</Program_OS_Support>
+		<Program_Language>English</Program_Language>
+		<Program_Change_Info />
+		<Program_Specific_Category>Audio</Program_Specific_Category>
+		<Program_Category_Class>Audio &amp; Multimedia::Other</Program_Category_Class>
+		<Program_System_Requirements />
+		<File_Info>
+			<File_Size_Bytes>14591313</File_Size_Bytes>
+			<File_Size_K>14249</File_Size_K>
+			<File_Size_MB>13.92</File_Size_MB>
+		</File_Info>
+		<Expire_Info>
+			<Has_Expire_Info>N</Has_Expire_Info>
+			<Expire_Count />
+			<Expire_Based_On>Days</Expire_Based_On>
+			<Expire_Other_Info />
+			<Expire_Month />
+			<Expire_Day />
+			<Expire_Year />
+		</Expire_Info>
+	</Program_Info>
+	<Program_Descriptions>
+		<English>
+			<Keywords>FM Stereo Encoder MPX RDS Radio</Keywords>
+			<Char_Desc_45>FM Stereo Encoder with RDS</Char_Desc_45>
+			<Char_Desc_80>FM Stereo Encoder with RDS. Create a stereo FM radio station</Char_Desc_80>
+			<Char_Desc_250>FM Stereo Encoder with RDS support. It can be used with an FM transmitter to produce a stereo radio station. With the RDS feature the currently playing song title and such can also be sent to the listener. Open source cross platform application.</Char_Desc_250>
+			<Char_Desc_450>JMPX is an FM Stereo Encoder with RDS support. JMPX can be used with an FM transmitter to produce a stereo radio station. With the RDS feature the currently playing song title, station name, program type, alternative frequencies, etc can also be sent to the listener. JMPX is an open source cross platform application that can be run Windows, Linux, Mac and so on; it can even run on Raspberry Pi 2 embeded computers.</Char_Desc_450>
+			<Char_Desc_2000>JMPX is an FM Stereo Encoder with RDS support. It can be used with an FM transmitter to produce a stereo radio station which can be received with any standard FM stereo radio. The FM transmitter gets connected to the computer soundcard and JMPX takes care of the rest. A soundcard that supports a sample rate of least 96000Hz is needed for stereo operation and 192000Hz for RDS operation. RDS operation allows transmission of information to the listener such as currently playing song title, station name, program type, alternative frequencies, etc. JMPX is an open source cross platform application that can be run Windows, Linux, Mac and so on; it can even run on Raspberry Pi 2 embeded computers.</Char_Desc_2000>
+		</English>
+	</Program_Descriptions>
+	<Web_Info>
+		<Application_URLs>
+			<Application_Info_URL>http://jontio.zapto.org/hda1/paradise/jmpxencoder/jmpx.html</Application_Info_URL>
+			<Application_Order_URL />
+			<Application_Screenshot_URL>http://jontio.github.io/JMPX/JMPX-win.png</Application_Screenshot_URL>
+			<Application_Icon_URL>http://jontio.github.io/JMPX/JMPX-icon.png</Application_Icon_URL>
+			<Application_XML_File_URL>http://jontio.github.io/JMPX/JMPX-pad.xml</Application_XML_File_URL>
+		</Application_URLs>
+		<Download_URLs>
+			<Primary_Download_URL>http://github.com/jontio/JMPX/releases/download/v2.0.0/JMPX-x32-setup.exe</Primary_Download_URL>
+			<Secondary_Download_URL />
+			<Additional_Download_URL_1 />
+			<Additional_Download_URL_2 />
+		</Download_URLs>
+	</Web_Info>
+	<Permissions>
+		<Distribution_Permissions>The MIT License (MIT)
+
+Copyright (c) 2015 Jonathan Olds
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</Distribution_Permissions>
+		<EULA>The MIT License (MIT)
+
+Copyright (c) 2015 Jonathan Olds
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</EULA>
+	</Permissions>
+</XML_DIZ_INFO>
