@@ -6,4 +6,5 @@ DISTFILES += \
     one-transistor-tranmitter.png \
     one-transistor-tranmitter-schem.png \
     JMPX-rds-settings.png \
-    JMPX-win.png
+    JMPX-win.png \
+    JMPX-icon.png
