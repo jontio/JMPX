@@ -2,6 +2,7 @@
 
 #include <QThread>
 #include <QElapsedTimer>
+#include <QTimer>
 
 //----PHY layer things
 
@@ -319,12 +320,16 @@ void RDSGroup::setBlock(quint16 message,offset_type offset)
 
 RDS::RDS(QObject *parent) : RDSDifferentialBiPhaseSymbolGenerator(parent)
 {
+
     grp0Awantedbandwidthusage=-1;
     grp2Awantedbandwidthusage=-1;
+    grp5Awantedbandwidthusage=-1;
 
+    //default rates. no 5a groups
     //grp0Awantedbandwidthusage 80%
     //grp2Awantedbandwidthusage 20%
-    set_grouppercentages(0.8,0.2);
+    //grp5Awantedbandwidthusage 00%
+    set_grouppercentages(0.8,0.2,0.0);
 
     clocktimeoffset=0;
 
@@ -333,20 +338,24 @@ RDS::RDS(QObject *parent) : RDSDifferentialBiPhaseSymbolGenerator(parent)
     rbds=false;
 
     connect(this,SIGNAL(wantmoregroups()),this,SLOT(wantmoregroups_slot()),Qt::QueuedConnection);
+
 }
 
-void RDS::set_grouppercentages(double _grp0Awantedbandwidthusage,double _grp2Awantedbandwidthusage)
+void RDS::set_grouppercentages(double _grp0Awantedbandwidthusage, double _grp2Awantedbandwidthusage, double _grp5Awantedbandwidthusage)
 {
-    if((_grp0Awantedbandwidthusage==grp0Awantedbandwidthusage)&&(_grp2Awantedbandwidthusage==grp2Awantedbandwidthusage))return;
+    if((_grp0Awantedbandwidthusage==grp0Awantedbandwidthusage)&&(_grp2Awantedbandwidthusage==grp2Awantedbandwidthusage)&&(_grp5Awantedbandwidthusage==grp5Awantedbandwidthusage))return;
     grp0Awantedbandwidthusage=_grp0Awantedbandwidthusage;
     grp2Awantedbandwidthusage=_grp2Awantedbandwidthusage;
+    grp5Awantedbandwidthusage=_grp5Awantedbandwidthusage;
 
-    double scalling=1.0/(grp0Awantedbandwidthusage+grp2Awantedbandwidthusage);
+    double scalling=1.0/(grp0Awantedbandwidthusage+grp2Awantedbandwidthusage+grp5Awantedbandwidthusage);
     grp0Awantedbandwidthusage*=scalling;
     grp2Awantedbandwidthusage*=scalling;
+    grp5Awantedbandwidthusage*=scalling;
     txtrunccnt=0;
     grp0Atxsum=0;
     grp2Atxsum=0;
+    grp5Atxsum=0;
 }
 
 void RDS::reset()
@@ -354,6 +363,7 @@ void RDS::reset()
     txtrunccnt=0;
     grp0Atxsum=0;
     grp2Atxsum=0;
+    grp5Atxsum=0;
     RDSDifferentialBiPhaseSymbolGenerator::reset();
 }
 
@@ -417,6 +427,7 @@ void RDS::wantmoregroups_slot()
         txtrunccnt+=1.0;
         if((grp0Atxsum/txtrunccnt)<grp0Awantedbandwidthusage)selection=SEL_0AGroup;
         if((grp2Atxsum/txtrunccnt)<grp2Awantedbandwidthusage)selection=SEL_2AGroup;
+        if((grp5Atxsum/txtrunccnt)<grp5Awantedbandwidthusage)selection=SEL_5AGroup;
 
         switch(selection)
         {
@@ -428,6 +439,10 @@ void RDS::wantmoregroups_slot()
             if(!havemorebits(grp2A.bits())){grp2A.rewind();return;}
             grp2Atxsum+=1.0;
             break;
+        case SEL_5AGroup:
+            if(!havemorebits(grp5A.bits())){grp5A.rewind();return;}
+            grp5Atxsum+=1.0;
+            break;
         default:
             qDebug()<<"No group selected for txing";
             return;
@@ -437,6 +452,7 @@ void RDS::wantmoregroups_slot()
         {
             grp0Atxsum/=2.0;
             grp2Atxsum/=2.0;
+            grp5Atxsum/=2.0;
             txtrunccnt/=2.0;
         }
 

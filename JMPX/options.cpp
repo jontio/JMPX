@@ -3,6 +3,7 @@
 #include <QDebug>
 #include <QMessageBox>
 #include <QSettings>
+#include <QFileDialog>
 
 Options::Options(QWidget *parent) :
     QDialog(parent),
@@ -25,7 +26,7 @@ Options::~Options()
     delete ui;
 }
 
-void Options::savesettings(JMPXInterface *pJMPX)
+void Options::savesettings(JMPXInterface *pJMPX,FileLoader *fileloader)
 {
     QSettings settings("JontiSoft", "JMPX");
 
@@ -115,9 +116,25 @@ void Options::savesettings(JMPXInterface *pJMPX)
     //update_rt_music_title
     settings.setValue("update_rt_music_title",update_rt_music_title);
 
+//third tab
+
+    //5a enable
+    settings.setValue("RDS_5A_Enable",pJMPX->RDS_Get_5A_Enable());
+
+    //5a filename ashextext
+    settings.setValue("5A_fileloader_ashextext",fileloader->get_ashextext());
+
+    //5a filename
+    settings.setValue("5A_fileloader_filename",fileloader->get_filename());
+
+    //group percentages
+    settings.setValue("RDS_grp0Awantedbandwidthusage",pJMPX->RDS_Get_grp0Awantedbandwidthusage());
+    settings.setValue("RDS_grp2Awantedbandwidthusage",pJMPX->RDS_Get_grp2Awantedbandwidthusage());
+    settings.setValue("RDS_grp5Awantedbandwidthusage",pJMPX->RDS_Get_grp5Awantedbandwidthusage());
+
 }
 
-void Options::loadsettings(JMPXInterface *pJMPX)
+void Options::loadsettings(JMPXInterface *pJMPX,FileLoader *fileloader)
 {
     QSettings settings("JontiSoft", "JMPX");
 
@@ -205,9 +222,21 @@ void Options::loadsettings(JMPXInterface *pJMPX)
     //update_rt_music_title
     update_rt_music_title=(settings.value("update_rt_music_title",true).toBool());
 
+//third tab
+
+    //5a enable
+    pJMPX->RDS_Set_5A_Enable(settings.value("RDS_5A_Enable",false).toBool());
+
+    //5a filename and ashextext
+    fileloader->set_filename(settings.value("5A_fileloader_filename","").toString(),settings.value("5A_fileloader_ashextext",true).toBool());
+
+    //group percentages
+    pJMPX->RDS_Set_grouppercentages(settings.value("RDS_grp0Awantedbandwidthusage",0.8).toDouble(),settings.value("RDS_grp2Awantedbandwidthusage",0.2).toDouble(),settings.value("RDS_grp5Awantedbandwidthusage",0.0).toDouble());
+
+
 }
 
-void Options::populatesettings(JMPXInterface *pJMPX)
+void Options::populatesettings(JMPXInterface *pJMPX, FileLoader *fileloader)
 {
 
 //first tab
@@ -362,9 +391,25 @@ void Options::populatesettings(JMPXInterface *pJMPX)
     //update_rt_music_title
     ui->checkBox_update_rt_music_title->setChecked(update_rt_music_title);
 
+//third tab
+
+    //5a enable
+    ui->groupBox_5a->setChecked(pJMPX->RDS_Get_5A_Enable());
+
+    //5a filename ashextext
+    ui->checkBox_5a_file_is_hextext->setChecked(fileloader->get_ashextext());
+
+    //5a filename
+    ui->lineEdit_5a_filename->setText(fileloader->get_filename());
+
+    //group percentages
+    ui->spinBox_0A_percent->setValue(pJMPX->RDS_Get_grp0Awantedbandwidthusage()*100+0.5);
+    ui->spinBox_2A_percent->setValue(pJMPX->RDS_Get_grp2Awantedbandwidthusage()*100+0.5);
+    ui->spinBox_5A_percent->setValue(pJMPX->RDS_Get_grp5Awantedbandwidthusage()*100+0.5);
+
 }
 
-void Options::pushsetting(JMPXInterface *pJMPX)
+void Options::pushsetting(JMPXInterface *pJMPX,FileLoader *fileloader)
 {
 
 //first tab
@@ -480,6 +525,17 @@ void Options::pushsetting(JMPXInterface *pJMPX)
     //update_rt_music_title
     update_rt_music_title=ui->checkBox_update_rt_music_title->isChecked();
 
+//third tab
+
+    //5a enable
+    pJMPX->RDS_Set_5A_Enable(ui->groupBox_5a->isChecked());
+
+    //5a filename and ashextext
+    fileloader->set_filename(ui->lineEdit_5a_filename->text(),ui->checkBox_5a_file_is_hextext->isChecked());
+
+    //group percentages
+    pJMPX->RDS_Set_grouppercentages(ui->spinBox_0A_percent->value(),ui->spinBox_2A_percent->value(),ui->spinBox_5A_percent->value());
+
 }
 
 void Options::on_checkBox_rbds_clicked(bool checked)
@@ -583,4 +639,85 @@ void Options::on_horizontalSlider_pilotlevel_valueChanged(int value)
 void Options::on_horizontalSlider_rdslevel_valueChanged(int value)
 {
     ui->label_rdslevel->setText(((QString)"%1%").arg(((double)value)/10.0,0,'f',1,'0'));
+}
+
+void Options::on_toolButton_5a_filename_clicked()
+{
+
+    QFileDialog dlg( NULL,tr("Select 5A file"),ui->lineEdit_5a_filename->text(), tr("Any Files (*.*)"));
+    dlg.setAcceptMode( QFileDialog::AcceptOpen );
+    if(dlg.exec() != QDialog::Accepted)return;
+    QString filename = dlg.selectedFiles().at(0);//QFileDialog::getOpenFileName(this,tr("Select 5A file"),lastdirectorytheuserlookedat, tr("Any Files (*.*)"));
+    ui->lineEdit_5a_filename->setText(filename);
+}
+
+void Options::on_checkBox_rt_enable_clicked()
+{
+    on_groupBox_5a_clicked();
+}
+
+void Options::on_groupBox_5a_clicked()
+{
+    if(ui->checkBox_rt_enable->isChecked()>0)
+    {
+        if(ui->groupBox_5a->isChecked())
+        {
+            ui->spinBox_0A_percent->setValue(40);
+            ui->spinBox_2A_percent->setValue(20);
+            ui->spinBox_5A_percent->setValue(40);
+        }
+         else
+         {
+            ui->spinBox_0A_percent->setValue(80);
+            ui->spinBox_2A_percent->setValue(20);
+            ui->spinBox_5A_percent->setValue(00);
+         }
+    }
+     else
+     {
+        if(ui->groupBox_5a->isChecked())
+        {
+            ui->spinBox_0A_percent->setValue(50);
+            ui->spinBox_2A_percent->setValue(00);
+            ui->spinBox_5A_percent->setValue(50);
+        }
+         else
+         {
+            ui->spinBox_0A_percent->setValue(100);
+            ui->spinBox_2A_percent->setValue(00);
+            ui->spinBox_5A_percent->setValue(00);
+         }
+     }
+}
+
+//not used but it could if you really want to
+void Options::validatepercentagespinboxes()
+{
+    double grp0Awantedbandwidthusage=ui->spinBox_0A_percent->value();
+    double grp2Awantedbandwidthusage=ui->spinBox_2A_percent->value();
+    double grp5Awantedbandwidthusage=ui->spinBox_5A_percent->value();
+    double scalling=1.0/(grp0Awantedbandwidthusage+grp2Awantedbandwidthusage+grp5Awantedbandwidthusage);
+    grp0Awantedbandwidthusage*=scalling;
+    grp2Awantedbandwidthusage*=scalling;
+    grp5Awantedbandwidthusage*=scalling;
+
+    ui->spinBox_0A_percent->setValue(grp0Awantedbandwidthusage*100+0.5);
+    ui->spinBox_2A_percent->setValue(grp2Awantedbandwidthusage*100+0.5);
+    ui->spinBox_5A_percent->setValue(grp5Awantedbandwidthusage*100+0.5);
+}
+
+void Options::on_spinBox_2A_percent_valueChanged(int arg1)
+{
+    if(arg1==0)
+    {
+        ui->checkBox_rt_enable->setChecked(false);
+    } else ui->checkBox_rt_enable->setChecked(true);
+}
+
+void Options::on_spinBox_5A_percent_valueChanged(int arg1)
+{
+    if(arg1==0)
+    {
+        ui->groupBox_5a->setChecked(false);
+    } else ui->groupBox_5a->setChecked(true);
 }

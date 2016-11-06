@@ -35,13 +35,15 @@ HEADERS += \
     mainwindow.h \
     vol/volumemeter.h \
     ../libJMPX/JMPXInterface.h \
-    options.h
+    options.h \
+    fileloader.h
 
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
     vol/volumemeter.cpp \
-    options.cpp
+    options.cpp \
+    fileloader.cpp
 
 unix {
 HEADERS += nowplaying_linux.h

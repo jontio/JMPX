@@ -100,6 +100,11 @@ public:
     virtual void RDS_Set_RT_Enable(bool enable)=0;
     virtual bool RDS_Get_RT_Enable()=0;
 
+    virtual void RDS_Set_5A_Enable(bool enable)=0;
+    virtual bool RDS_Get_5A_Enable()=0;
+
+    virtual void RDS_Set_5A_data(const QByteArray &data)=0;
+
     virtual void RDS_Set_clocktimeoffset(int offset_in_groups)=0;
     virtual int RDS_Get_clocktimeoffset()=0;
 
@@ -107,6 +112,13 @@ public:
     virtual void RDS_Set_altfreq1(double freq)=0;
     virtual double RDS_Get_altfreq2()=0;
     virtual void RDS_Set_altfreq2(double freq)=0;
+
+    virtual double RDS_Get_grp0Awantedbandwidthusage()=0;
+    virtual double RDS_Get_grp2Awantedbandwidthusage()=0;
+    virtual double RDS_Get_grp5Awantedbandwidthusage()=0;
+    virtual void RDS_Set_grouppercentages(double grp0Awantedbandwidthusage,double grp2Awantedbandwidthusage,double grp5Awantedbandwidthusage)=0;
+
+
 
     //--RDS interface end
 

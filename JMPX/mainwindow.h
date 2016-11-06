@@ -21,6 +21,7 @@
 #include "nowplaying_mac.h"
 #endif
 
+#include "fileloader.h"
 
 namespace Ui {
     class MainWindow;
@@ -40,6 +41,7 @@ private:
     Options *options;
     void updatelowrateinfo();
     NowPlaying  *nowplaying;
+    FileLoader *fileloader;
 private slots:
     void volbarssetfixedequalwidth();
     void updatedisplay();
@@ -48,6 +50,7 @@ private slots:
     void on_action_About_triggered();
     void on_actionAbout_Qt_triggered();
     void songtitlecheck(const QString &title);
+    void pushdatato5a(const QByteArray &data);
 };
 
 #endif // MAINWINDOW_H

@@ -16,6 +16,9 @@ DEFINES += JMPX_LIBRARY \
         REAL_FASTFIR \
         "kiss_fft_scalar=double"
 
+#remove warnings about std::auto_ptr being deprescated. what should we replace them with. TODO
+QMAKE_CXXFLAGS += -Wno-deprecated
+
 #You dont need all these audio APIs.
 #Say if you want only jack then remove __LINUX_PULSE__ and __LINUX_ALSA__ leaving just DEFINES += __UNIX_JACK__
 #I have never compiled on mac so if you have let me know if anything should be changed

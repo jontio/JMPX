@@ -50,8 +50,16 @@ MainWindow::MainWindow(QWidget *parent) :
          }
     }
 
+    //song title checker (has no settings)
+    nowplaying=new NowPlaying(this);
+    connect(nowplaying,SIGNAL(songtitlechanged(QString)),this,SLOT(songtitlecheck(QString)));
+
+    //Fileloader for group 5A (has settings)
+    fileloader=new FileLoader(this);
+    connect(fileloader,SIGNAL(dataLoadSignal(QByteArray)),this,SLOT(pushdatato5a(QByteArray)));
+
     //load settings
-    if(pJMPX)options->loadsettings(pJMPX);
+    if(pJMPX)options->loadsettings(pJMPX,fileloader);
 
     //update low rate info
     updatelowrateinfo();
@@ -60,10 +68,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ptimer= new QTimer(this);
     ptimer->setInterval(20);
     connect(ptimer,SIGNAL(timeout()),this,SLOT(updatedisplay()));
-
-    //song title checker
-    nowplaying=new NowPlaying(this);
-    connect(nowplaying,SIGNAL(songtitlechanged(QString)),this,SLOT(songtitlecheck(QString)));
 
     //restore modulate enable
     QSettings settings("JontiSoft", "JMPX");
@@ -74,7 +78,7 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     //save settings
-    if(pJMPX)options->savesettings(pJMPX);
+    if(pJMPX)options->savesettings(pJMPX,fileloader);
     QSettings settings("JontiSoft", "JMPX");
     settings.setValue("checkBox_modulate",ui->checkBox_modulate->isChecked());
     delete ui;
@@ -104,10 +108,10 @@ void MainWindow::updatedisplay()
 void MainWindow::on_action_Options_triggered()
 {
     if(!pJMPX)return;
-    options->populatesettings(pJMPX);
+    options->populatesettings(pJMPX,fileloader);
     if(options->exec()==QDialog::Accepted)
     {
-        options->pushsetting(pJMPX);
+        options->pushsetting(pJMPX,fileloader);
 
         ui->checkBox_modulate->setChecked(pJMPX->IsActive());
         songtitlecheck(nowplaying->rt_title);
@@ -166,10 +170,10 @@ void MainWindow::on_action_About_triggered()
 {
     QMessageBox::about(this,"JMPX",""
                                      "<H1>Stereo and RDS encoder for FM transmitters</H1>"
-                                     "<H3>v2.0.0</H3>"
+                                     "<H3>v2.0.1</H3>"
                                      "<p>When connected to an FM transmitter via a soundcard this program allows you to transmit in stereo along with the ability to send information using RDS (Radio Data System) to the listeners. With RDS the listerners can see what your station is called and other usefull information.</p>"
                                      "<p>For more information about this application see <a href=\"http://jontio.zapto.org/hda1/paradise/jmpxencoder/jmpx.html\">http://jontio.zapto.org/hda1/paradise/jmpxencoder/jmpx.html</a>.</p>"
-                                     "<p>Jonti 2015</p>" );
+                                     "<p>Jonti 2016</p>" );
 }
 
 void MainWindow::on_actionAbout_Qt_triggered()
@@ -192,4 +196,10 @@ void MainWindow::songtitlecheck(const QString &title)
 
     //set RT with title
     pJMPX->RDS_SetRT(title);
+}
+
+void MainWindow::pushdatato5a(const QByteArray &data)
+{
+    if((!pJMPX)||!pJMPX.data()->IsActive())return;
+    pJMPX->RDS_Set_5A_data(data);
 }
