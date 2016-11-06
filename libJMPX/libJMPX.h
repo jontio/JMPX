@@ -218,6 +218,11 @@ public:
     void RDS_Set_RT_Enable(bool enable){rds->set_rt_enable(enable);}
     bool RDS_Get_RT_Enable(){return rds->get_rt_enable();}
 
+    void RDS_Set_5A_Enable(bool enable){rds->set_5a_enable(enable);}
+    bool RDS_Get_5A_Enable(){return rds->get_5a_enable();}
+
+    void RDS_Set_5A_data(const QByteArray &data){rds->set_5a_data(data);}
+
     void RDS_Set_clocktimeoffset(int offset_in_groups){rds->clocktimeoffset=offset_in_groups;}
     int RDS_Get_clocktimeoffset(){return rds->clocktimeoffset;}
 
@@ -226,6 +231,11 @@ public:
 
     double RDS_Get_altfreq2(){return rds->get_altfreq2();}
     void RDS_Set_altfreq2(double freq){rds->set_altfreq2(freq);}
+
+    double RDS_Get_grp0Awantedbandwidthusage(){return rds->get_grp0Awantedbandwidthusage();}
+    double RDS_Get_grp2Awantedbandwidthusage(){return rds->get_grp2Awantedbandwidthusage();}
+    double RDS_Get_grp5Awantedbandwidthusage(){return rds->get_grp5Awantedbandwidthusage();}
+    void RDS_Set_grouppercentages(double grp0Awantedbandwidthusage,double grp2Awantedbandwidthusage,double grp5Awantedbandwidthusage){rds->set_grouppercentages(grp0Awantedbandwidthusage,grp2Awantedbandwidthusage,grp5Awantedbandwidthusage);}
 
     //RDS interface to implimentation stop
 

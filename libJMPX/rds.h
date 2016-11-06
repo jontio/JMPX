@@ -155,7 +155,7 @@ public:
     }
     void rewind()
     {
-        c--;c%=4;
+        c--;c=(c%4+4)%4;
     }
     QByteArray &bits()
     {
@@ -269,7 +269,7 @@ public:
     }
     void rewind()
     {
-        c--;c%=16;
+        c--;c=(c%16+16)%16;
     }
     QByteArray &bits()
     {
@@ -374,6 +374,75 @@ public:
 private:
 };
 
+//Linkish or Appish layer?
+class RDS5AGroup : public RDSGroup
+{
+public:
+    RDS5AGroup()
+    {
+        //set defaults
+        pi=0x9000;
+        tp=false;
+        pty=0;
+
+        //init
+        channel=-1;
+        c=0;
+    }
+
+    void rewind()
+    {
+        c-=5;
+        //c%=ba.size() is wrong in this case. % is not mod. for -ve numbers it has the wrong sign. the following is the mod operator
+        c=(c%ba.size()+ba.size())%ba.size();
+    }
+    void loaddata(const QByteArray &data)
+    {
+        c=0;
+        ba=data;
+        if((ba.size()%5)!=0)ba.resize(ba.size()+(5-(ba.size()%5)));//pad array to a multiple of 5
+    }
+    QByteArray &bits()
+    {
+
+        quint16 blk;
+
+        if(ba.size()<5)ba.fill(0,5);//ensure we have at least 5 items everytime we are called
+
+        //A
+        setBlock(pi,RDSGroup::Block_A);
+
+        //B
+        channel=ba[c];
+        blk=0x5000;
+        if(tp)blk|=0x0400;
+        blk|=(((quint16)pty)<<5);
+        blk|=(((quint16)channel)&0x001F);
+        setBlock(blk,RDSGroup::Block_B);
+
+        //C
+        blk=((((quint16)ba[c+1])<<8)|((quint16)ba[c+2]));
+        setBlock(blk,RDSGroup::Block_C);
+
+        //D
+        blk=((((quint16)ba[c+3])<<8)|((quint16)ba[c+4]));
+        setBlock(blk,RDSGroup::Block_D);
+
+        c+=5;c%=ba.size();
+
+        return data_chunk;
+    }
+
+
+    bool tp;
+    quint8 pty;
+    quint16 pi;
+private:
+    QByteArray ba;
+    int c;
+    int channel;
+};
+
 //-----------end of group implimentations
 
 //App layer
@@ -451,7 +520,7 @@ public:
     ,PTY_RBDS_Emergency} pty_rbds_type;
 
     explicit RDS(QObject *parent = 0);
-    void set_grouppercentages(double grp0Awantedbandwidthusage,double grp2Awantedbandwidthusage);
+    void set_grouppercentages(double grp0Awantedbandwidthusage,double grp2Awantedbandwidthusage,double grp5Awantedbandwidthusage);
     void reset();
 
     quint16 get_pi(){return grp0A.pi;}
@@ -468,26 +537,51 @@ public:
     bool get_ta(){return grp0A.ta;}
     bool get_ms(){return grp0A.ms;}
     bool get_rt_enable(){if(grp2Awantedbandwidthusage>0)return true;return false;}
+    bool get_5a_enable(){if(grp5Awantedbandwidthusage>0)return true;return false;}
 
-    void set_pi(quint16 pi){grp0A.pi=pi;grp2A.pi=pi;grp4A.pi=pi;}
+    void set_pi(quint16 pi){grp0A.pi=pi;grp2A.pi=pi;grp4A.pi=pi;grp5A.pi=pi;}
     void set_ps(QString ps){grp0A.set_ps(ps);}
     void set_rt(QString rt){grp2A.set_rt(rt);}
-    void set_pty(pty_type pty){grp0A.pty=(quint8)pty;grp2A.pty=(quint8)pty;grp4A.pty=(quint8)pty;}
+    void set_pty(pty_type pty){grp0A.pty=(quint8)pty;grp2A.pty=(quint8)pty;grp4A.pty=(quint8)pty;grp5A.pty=(quint8)pty;}
     void set_altfreq1(double freq_mhz){grp0A.set_altfreq1(freq_mhz);}
     void set_altfreq2(double freq_mhz){grp0A.set_altfreq2(freq_mhz);}
     void set_stereo(bool set){grp0A.stereo=set;}
     void set_artificial_head(bool set){grp0A.artificial_head=set;}
     void set_compressed(bool set){grp0A.compressed=set;}
     void set_dynamic_pty(bool set){grp0A.dynamic_pty=set;}
-    void set_tp(bool set){grp0A.tp=set;grp2A.tp=set;grp4A.tp=set;}
+    void set_tp(bool set){grp0A.tp=set;grp2A.tp=set;grp4A.tp=set;grp5A.tp=set;}
     void set_ta(bool set){grp0A.ta=set;}
     void set_ms(bool set){grp0A.ms=set;}
+    void set_5a_data(const QByteArray &data){grp5A.loaddata(data);}
     void set_rt_enable(bool set)
     {
-        if(set)set_grouppercentages(0.8,0.2);
-         else set_grouppercentages(1.0,0.0);
+        if(grp5Awantedbandwidthusage>0)
+        {
+            if(set)set_grouppercentages(0.4,0.2,0.4);
+             else set_grouppercentages(0.5,0.0,0.5);
+        }
+         else
+         {
+            if(set)set_grouppercentages(0.8,0.2,0.0);
+             else set_grouppercentages(1,0.0,0.0);
+         }
     }
-
+    void set_5a_enable(bool set)
+    {
+        if(grp2Awantedbandwidthusage>0)
+        {
+            if(set)set_grouppercentages(0.4,0.2,0.4);
+             else set_grouppercentages(0.8,0.2,0.0);
+        }
+         else
+         {
+            if(set)set_grouppercentages(0.5,0.0,0.5);
+             else set_grouppercentages(1,0.0,0.0);
+         }
+    }
+    double get_grp0Awantedbandwidthusage(){return grp0Awantedbandwidthusage;}
+    double get_grp2Awantedbandwidthusage(){return grp2Awantedbandwidthusage;}
+    double get_grp5Awantedbandwidthusage(){return grp5Awantedbandwidthusage;}
 
     //todo change these to getters and setters to match other things
     int clocktimeoffset;//to allow the user to adjust the delay caused by the soundcard buffer
@@ -495,22 +589,23 @@ public:
     bool rbds;
 
 signals:
-
-public slots:
 private slots:
     void wantmoregroups_slot();
 private:
 
-    typedef enum {SEL_0AGroup,SEL_2AGroup} selected_group_type;
+    typedef enum {SEL_0AGroup,SEL_2AGroup,SEL_5AGroup} selected_group_type;
 
     RDS0AGroup grp0A;
     RDS2AGroup grp2A;
     RDS4AGroup grp4A;
+    RDS5AGroup grp5A;
 
     double grp0Atxsum;
     double grp0Awantedbandwidthusage;
     double grp2Atxsum;
     double grp2Awantedbandwidthusage;
+    double grp5Atxsum;
+    double grp5Awantedbandwidthusage;
     double txtrunccnt;
 
 };
