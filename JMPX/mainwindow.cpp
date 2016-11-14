@@ -200,6 +200,6 @@ void MainWindow::songtitlecheck(const QString &title)
 
 void MainWindow::pushdatato5a(const QByteArray &data)
 {
-    if((!pJMPX)||!pJMPX.data()->IsActive())return;
+    if(!pJMPX)return;
     pJMPX->RDS_Set_5A_data(data);
 }

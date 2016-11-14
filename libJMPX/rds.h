@@ -204,16 +204,16 @@ public:
         switch(c)
         {
         case 0:
-            blk=((((quint16)ba[0])<<8)|((quint16)ba[1]));
+            blk=((((quint16)((uchar)ba[0]))<<8)|((quint16)((uchar)ba[1])));
             break;
         case 1:
-            blk=((((quint16)ba[2])<<8)|((quint16)ba[3]));
+            blk=((((quint16)((uchar)ba[2]))<<8)|((quint16)((uchar)ba[3])));
             break;
         case 2:
-            blk=((((quint16)ba[4])<<8)|((quint16)ba[5]));
+            blk=((((quint16)((uchar)ba[4]))<<8)|((quint16)((uchar)ba[5])));
             break;
         case 3:
-            blk=((((quint16)ba[6])<<8)|((quint16)ba[7]));
+            blk=((((quint16)((uchar)ba[6]))<<8)|((quint16)((uchar)ba[7])));
             break;
         }
         setBlock(blk,RDSGroup::Block_D);
@@ -289,11 +289,11 @@ public:
         setBlock(blk,RDSGroup::Block_B);
 
         //C
-        blk=((((quint16)ba[4*c])<<8)|((quint16)ba[4*c+1]));
+        blk=((((quint16)((uchar)ba[4*c]))<<8)|((quint16)((uchar)ba[4*c+1])));
         setBlock(blk,RDSGroup::Block_C);
 
         //D
-        blk=((((quint16)ba[4*c+2])<<8)|((quint16)ba[4*c+3]));
+        blk=((((quint16)((uchar)ba[4*c+2]))<<8)|((quint16)((uchar)ba[4*c+3])));
         setBlock(blk,RDSGroup::Block_D);
 
         if((ba[4*c]==(char)0x0D)|(ba[4*c+1]==(char)0x0D)|(ba[4*c+2]==(char)0x0D)|(ba[4*c+3]==(char)0x0D))c=-1;
@@ -413,7 +413,7 @@ public:
         setBlock(pi,RDSGroup::Block_A);
 
         //B
-        channel=ba[c];
+        channel=((uchar)ba[c]);
         blk=0x5000;
         if(tp)blk|=0x0400;
         blk|=(((quint16)pty)<<5);
@@ -421,11 +421,11 @@ public:
         setBlock(blk,RDSGroup::Block_B);
 
         //C
-        blk=((((quint16)ba[c+1])<<8)|((quint16)ba[c+2]));
+        blk=((((quint16)((uchar)ba[c+1]))<<8)|((quint16)((uchar)ba[c+2])));
         setBlock(blk,RDSGroup::Block_C);
 
         //D
-        blk=((((quint16)ba[c+3])<<8)|((quint16)ba[c+4]));
+        blk=((((quint16)((uchar)ba[c+3]))<<8)|((quint16)((uchar)ba[c+4])));
         setBlock(blk,RDSGroup::Block_D);
 
         c+=5;c%=ba.size();
