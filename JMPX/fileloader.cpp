@@ -1,6 +1,7 @@
 #include "fileloader.h"
 #include <QDebug>
 #include <QTimer>
+#include <QStringList>
 
 FileLoader::FileLoader(QObject *parent) : QObject(parent)
 {

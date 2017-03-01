@@ -5,7 +5,8 @@ using namespace std;
 
 struct TSigStats
 {
-	double lvol;
+    double scavol;
+    double lvol;
 	double rvol;
 	double outvol;
 };

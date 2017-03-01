@@ -88,7 +88,7 @@ private:
 class WaveTable
 {
 public:
-         WaveTable(TDspGen *_pDspGen);
+        WaveTable(TDspGen *_pDspGen);
 
         ~WaveTable();
         void WTnextFrame();
@@ -96,11 +96,22 @@ public:
         double   WTSin2Value();
         double   WTSin3Value();
         void  RefreshSettings();
+        void WTnextFrame(double offset_in_hz);
 private:
         double WTstep;
         int intWTptr;
         double WTptr;
         TDspGen *pDspGen;
+};
+
+//-------------------
+
+class JFilterDesign
+{
+public:
+    JFilterDesign(){}
+    static std::vector<kffsamp_t> LowPassHanning(double FrequencyCutOff, double SampleRate, int Length);
+private:
 };
 
 //-------------------
@@ -171,8 +182,8 @@ public:
 class FastFIRFilter
 {
 public:
-    FastFIRFilter(std::vector<kffsamp_t> &imp_responce,size_t &nfft);
-    FastFIRFilter(std::vector<kffsamp_t> &imp_responce);
+    FastFIRFilter(std::vector<kffsamp_t> imp_responce, size_t &nfft);
+    FastFIRFilter(std::vector<kffsamp_t> imp_responce);
     int Update(kffsamp_t *data,int Size);
     void reset();
     ~FastFIRFilter();
@@ -243,7 +254,138 @@ public:
 
 //-----RDS Biphase symbol generator
 
-//-----
+//jfast fir
+
+class JFastFIRFilter
+{
+public:
+    JFastFIRFilter();
+    int setKernel(vector<kffsamp_t> imp_responce,int nfft);
+    int setKernel(vector<kffsamp_t> imp_responce);
+    void Update(kffsamp_t *data,int Size);
+    void Update(vector<kffsamp_t> &data);
+    void reset();
+    ~JFastFIRFilter();
+private:
+    size_t nfft;
+    kiss_fastfir_cfg cfg;
+    size_t idx_inbuf;
+    std::vector<kffsamp_t> inbuf;
+    std::vector<kffsamp_t> outbuf;
+    std::vector<kffsamp_t> remainder;
+    int remainder_ptr;
+};
+
+//-------
+
+//-----FM modulator for SCA
+
+
+class FMModulator
+{
+public:
+    FMModulator(TSetGen *_pSetGen);
+    ~FMModulator();
+    double update(double &insignal);
+    void RefreshSettings(double carrier_freq, double max_audio_input_frequency, double max_deviation);
+    void SetTc(TimeConstant timeconst){preemp.SetTc(timeconst);}
+    TimeConstant GetTc(){return preemp.GetTc();}
+private:
+    double max_deviation;
+    TSetGen ASetGen;
+    std::auto_ptr< TDspGen > pTDSPGen;
+    std::auto_ptr< TDspGen > pTDSPGenCarrier;
+    std::auto_ptr< WaveTable > pWaveTableCarrier;
+    JFastFIRFilter *fir;
+
+    double maxinfreq;
+
+    Clipper clipper;
+
+    PreEmphasis preemp;
+
+    std::vector<double> input_output_buf;
+    int input_output_buf_ptr;
+
+
+};
+
+//-------------------
+
+class MovingAverage
+{
+public:
+    MovingAverage();
+    void setSize(int size);
+    double Update(double sig);
+    double Val;
+private:
+    int MASz;
+    double MASum;
+    std::vector<double> MABuffer;
+    int MAPtr;
+};
+
+//-------------------
+
+class PeakMeasure
+{
+public:
+    PeakMeasure()
+    {
+        vol=0;
+        holdcnt=0;
+        t_vol=0;
+        maxholdcnt=20;
+        decay=0.01;
+        smoothing=0.8;
+        constantdecay=0.0001;
+        expo_smoothing=false;
+        ma.setSize(40);
+    }
+    void setSettings(int _maxholdcnt,double _decay,double _smoothing,double _constantdecay, int movingavesize, bool _expo_smoothing)
+    {
+        maxholdcnt=_maxholdcnt;
+        decay=_decay;
+        smoothing=_smoothing;
+        constantdecay=_constantdecay;
+        expo_smoothing=_expo_smoothing;
+        ma.setSize(movingavesize);
+    }
+
+    double update(double signal)
+    {
+        signal=fabs(signal);
+        if(signal>t_vol)
+        {
+            t_vol=signal;
+            holdcnt=maxholdcnt;
+        }
+        if(holdcnt>0)holdcnt--;
+        if(!holdcnt)
+        {
+            t_vol-=decay;
+            if(t_vol<0)t_vol=0;
+        }
+        if(expo_smoothing)vol=smoothing*vol+(1.0-smoothing)*t_vol-constantdecay;
+         else vol=ma.Update(t_vol);
+        if(vol<0)vol=0;
+        return vol;
+    }
+    double vol;
+private:
+    bool expo_smoothing;
+    int holdcnt;
+    double t_vol;
+    int maxholdcnt;
+    double decay;
+    double smoothing;
+    double constantdecay;
+    MovingAverage ma;
+};
+
+//-------------------
+
 
 
 #endif  //JDSP_H

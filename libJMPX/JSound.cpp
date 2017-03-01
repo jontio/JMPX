@@ -129,7 +129,16 @@ void TJCSound::Active(bool State)
             //10 tries as on JACK sometimes stream wont open first time. Don't know why. This should solve the problem.
             int i=0;
             tryagain:
-            AnRtAudio.openStream( &oParameters,  &iParameters, RTAUDIO_FLOAT64,sampleRate, &bufferFrames, Dispatcher, (void *)this, &options );
+
+            //SCA tests
+            if(oParameters.nChannels>0&&iParameters.nChannels>0)AnRtAudio.openStream( &oParameters,  &iParameters, RTAUDIO_FLOAT64,sampleRate, &bufferFrames, Dispatcher, (void *)this, &options );
+             else
+             {
+                if(oParameters.nChannels>0)AnRtAudio.openStream( &oParameters,  NULL, RTAUDIO_FLOAT64,sampleRate, &bufferFrames, Dispatcher, (void *)this, &options );
+                if(iParameters.nChannels>0)AnRtAudio.openStream( NULL,  &iParameters, RTAUDIO_FLOAT64,sampleRate, &bufferFrames, Dispatcher, (void *)this, &options );
+             }
+            //
+
             i++;
             try{AnRtAudio.startStream();}
             catch(RtAudioError& e)

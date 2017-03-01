@@ -33,6 +33,7 @@ void Options::savesettings(JMPXInterface *pJMPX,FileLoader *fileloader)
 //first tab
 
     //soundcard
+    settings.setValue("soundcard_sca",pJMPX->GetSoundCardSCAName());
     settings.setValue("soundcard_in",pJMPX->GetSoundCardInName());
     settings.setValue("soundcard_out",pJMPX->GetSoundCardOutName());
 
@@ -59,6 +60,21 @@ void Options::savesettings(JMPXInterface *pJMPX,FileLoader *fileloader)
 
     //set rds level
     settings.setValue("RDSLevel",pJMPX->GetRDSLevel());
+
+    //set sca level
+    settings.setValue("SCALevel",pJMPX->GetSCALevel());
+
+    //set sca max deviation
+    settings.setValue("SCAMaxDeviation",pJMPX->GetSCAMaxDeviation());
+
+    //set sca max input frequency
+    settings.setValue("SCAMaxInputFrequency",pJMPX->GetSCAMaxInputFrequency());
+
+    //set sca carrier frequency
+    settings.setValue("SCACarrierFrequency",pJMPX->GetSCACarrierFrequency());
+
+    //set number of buffer frames
+    settings.setValue("NumberOfBufferFrames",pJMPX->GetBufferFrames());
 
 //second tab
 
@@ -139,8 +155,12 @@ void Options::loadsettings(JMPXInterface *pJMPX,FileLoader *fileloader)
     QSettings settings("JontiSoft", "JMPX");
 
     //soundcard
+    pJMPX->SetSoundCardSCAName(settings.value("soundcard_sca","None").toString());
     pJMPX->SetSoundCardInName(settings.value("soundcard_in","Default").toString());
     pJMPX->SetSoundCardOutName(settings.value("soundcard_out","Default").toString());
+
+    //show sca volume meter if needed
+    Show_SCA_Volume_Meter_signal(pJMPX->GetSoundCardSCAName().toUpper()!="NONE");
 
     //preemp
     pJMPX->SetPreEmphasis((TimeConstant)settings.value("PreEmphasis",(int)WORLD).toInt());
@@ -165,6 +185,21 @@ void Options::loadsettings(JMPXInterface *pJMPX,FileLoader *fileloader)
 
     //set rds level
     pJMPX->SetRDSLevel(settings.value("RDSLevel",0.06).toDouble());
+
+    //set sca level
+    pJMPX->SetSCALevel(settings.value("SCALevel",0.08).toDouble());
+
+    //set sca max deviation
+    pJMPX->SetSCAMaxDeviation(settings.value("SCAMaxDeviation",3000).toDouble());
+
+    //set sca max input frequency
+    pJMPX->SetSCAMaxInputFrequency(settings.value("SCAMaxInputFrequency",5000).toDouble());
+
+    //set sca carrier frequency
+    pJMPX->SetSCACarrierFrequency(settings.value("SCACarrierFrequency",67500).toDouble());
+
+    //set number of buffer frames
+    pJMPX->SetBufferFrames(settings.value("NumberOfBufferFrames",8192).toInt());
 
 //second tab
 
@@ -243,10 +278,13 @@ void Options::populatesettings(JMPXInterface *pJMPX, FileLoader *fileloader)
 
     //get soundcards
     SDevices* pdev=pJMPX->GetDevices();
+    ui->comboBox_soundcard_sca->clear();
     ui->comboBox_soundcard_in->clear();
     ui->comboBox_soundcard_out->clear();
+    ui->comboBox_soundcard_sca->addItem("None");//for SCA lets be able to select nothing
     for(unsigned int i=0;i<pdev->NumberOfDevices;i++)
     {
+        if(pdev->Device[i].inchannelcount>0)ui->comboBox_soundcard_sca->addItem(pdev->Device[i].name);
         if(pdev->Device[i].inchannelcount>0)ui->comboBox_soundcard_in->addItem(pdev->Device[i].name);
         if(pdev->Device[i].outchannelcount>0)ui->comboBox_soundcard_out->addItem(pdev->Device[i].name);
     }
@@ -255,6 +293,24 @@ void Options::populatesettings(JMPXInterface *pJMPX, FileLoader *fileloader)
 
     //thanks doqtor for this solution to text overflow of qcomboboxes
     //determinge the maximum width required to display all names in full
+    {
+    int max_width = 0;
+    QFontMetrics fm(ui->comboBox_soundcard_sca->font());
+    for(int x = 0; x < ui->comboBox_soundcard_sca->count(); ++x)
+    {
+        int width = fm.width(ui->comboBox_soundcard_sca->itemText(x));
+        if(width > max_width)
+            max_width = width;
+    }
+    if(ui->comboBox_soundcard_sca->view()->minimumWidth() < max_width)
+    {
+        // add scrollbar width and margin
+        max_width += ui->comboBox_soundcard_sca->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+        max_width += ui->comboBox_soundcard_sca->view()->autoScrollMargin();
+        // set the minimum width of the combobox drop down list
+        ui->comboBox_soundcard_sca->view()->setMinimumWidth(max_width);
+    }
+    }
     {
     int max_width = 0;
     QFontMetrics fm(ui->comboBox_soundcard_in->font());
@@ -292,7 +348,9 @@ void Options::populatesettings(JMPXInterface *pJMPX, FileLoader *fileloader)
     }
     }
 
-    //soundcard   
+    //soundcard
+    ui->comboBox_soundcard_sca->setCurrentIndex(0);
+    {int index=ui->comboBox_soundcard_sca->findText(pJMPX->GetSoundCardSCAName());ui->comboBox_soundcard_sca->setCurrentIndex(index);}
     ui->comboBox_soundcard_in->setCurrentIndex(0);
     {int index=ui->comboBox_soundcard_in->findText(pJMPX->GetSoundCardInName());ui->comboBox_soundcard_in->setCurrentIndex(index);}
     ui->comboBox_soundcard_out->setCurrentIndex(0);
@@ -331,6 +389,22 @@ void Options::populatesettings(JMPXInterface *pJMPX, FileLoader *fileloader)
 
     //set rdslevel
     ui->horizontalSlider_rdslevel->setValue(qRound(pJMPX->GetRDSLevel()*1000.0));
+
+    //set scalevel
+    ui->horizontalSlider_scalevel->setValue(qRound(pJMPX->GetSCALevel()*1000.0));
+
+    //set sca max deviation
+    ui->spinBox_scamaxdeviation->setValue(pJMPX->GetSCAMaxDeviation());
+
+    //set sca max input frequency
+    ui->spinBox_scamaxinfreq->setValue(pJMPX->GetSCAMaxInputFrequency());
+
+    //set sca carrier frequency
+    ui->spinBox_scacarrierfreq->setValue(pJMPX->GetSCACarrierFrequency());
+
+    //set number of buffer frames
+    ui->comboBox_numberofbuffers->setCurrentIndex(0);
+    {int index=ui->comboBox_numberofbuffers->findText(QString::number(pJMPX->GetBufferFrames()));ui->comboBox_numberofbuffers->setCurrentIndex(index);}
 
 //second tab
 
@@ -414,18 +488,19 @@ void Options::pushsetting(JMPXInterface *pJMPX,FileLoader *fileloader)
 
 //first tab
 
-    if((pJMPX->GetSoundCardInName()!=ui->comboBox_soundcard_in->currentText())||(pJMPX->GetSoundCardOutName()!=ui->comboBox_soundcard_out->currentText()))
+    if((pJMPX->GetBufferFrames()!=ui->comboBox_numberofbuffers->currentText().toInt())||(pJMPX->GetSoundCardSCAName()!=ui->comboBox_soundcard_sca->currentText())||(pJMPX->GetSoundCardInName()!=ui->comboBox_soundcard_in->currentText())||(pJMPX->GetSoundCardOutName()!=ui->comboBox_soundcard_out->currentText()))
     {
-        qDebug()<<"sound card changed";
+        qDebug()<<"sound card settings changed";
 
         bool orgstate=pJMPX->IsActive();
 
         pJMPX->Active(false);
 
         pJMPX->SetSampleRate(192000);
+        pJMPX->SetSoundCardSCAName(ui->comboBox_soundcard_sca->currentText());
         pJMPX->SetSoundCardInName(ui->comboBox_soundcard_in->currentText());
         pJMPX->SetSoundCardOutName(ui->comboBox_soundcard_out->currentText());
-        pJMPX->SetBufferFrames(8096);//adjust this for latency or for lost frames
+        pJMPX->SetBufferFrames(ui->comboBox_numberofbuffers->currentText().toInt());//adjust this for latency or for lost frames
 
         pJMPX->Active(orgstate);
         if((orgstate)&&(pJMPX->GotError()))
@@ -438,6 +513,9 @@ void Options::pushsetting(JMPXInterface *pJMPX,FileLoader *fileloader)
         }
 
     }
+
+    //show sca volume meter if needed
+    Show_SCA_Volume_Meter_signal(pJMPX->GetSoundCardSCAName().toUpper()!="NONE");
 
     //preemp
     if(ui->preemp_radionone->isChecked())pJMPX->SetPreEmphasis(NONE);
@@ -464,6 +542,21 @@ void Options::pushsetting(JMPXInterface *pJMPX,FileLoader *fileloader)
 
     //set rdslevel
     pJMPX->SetRDSLevel(((double)ui->horizontalSlider_rdslevel->value())/1000.0);
+
+    //set scalevel
+    pJMPX->SetSCALevel(((double)ui->horizontalSlider_scalevel->value())/1000.0);
+
+    //set sca max deviation
+    pJMPX->SetSCAMaxDeviation((double)ui->spinBox_scamaxdeviation->value());
+
+    //set sca max input frequency
+    pJMPX->SetSCAMaxInputFrequency((double)ui->spinBox_scamaxinfreq->value());
+
+    //set sca carrier frequency
+    pJMPX->SetSCACarrierFrequency((double)ui->spinBox_scacarrierfreq->value());
+
+    //set number of buffer frames
+    pJMPX->SetBufferFrames(ui->comboBox_numberofbuffers->currentText().toInt());
 
 //second tab
 
@@ -639,6 +732,11 @@ void Options::on_horizontalSlider_pilotlevel_valueChanged(int value)
 void Options::on_horizontalSlider_rdslevel_valueChanged(int value)
 {
     ui->label_rdslevel->setText(((QString)"%1%").arg(((double)value)/10.0,0,'f',1,'0'));
+}
+
+void Options::on_horizontalSlider_scalevel_valueChanged(int value)
+{
+    ui->label_scalevel->setText(((QString)"%1%").arg(((double)value)/10.0,0,'f',1,'0'));
 }
 
 void Options::on_toolButton_5a_filename_clicked()

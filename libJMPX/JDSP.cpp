@@ -47,6 +47,12 @@ void WaveTable::WTnextFrame()
     intWTptr=(int)WTptr;
 }
 
+void WaveTable::WTnextFrame(double offset_in_hz)
+{
+    WTstep=(offset_in_hz+pDspGen->Freq)*(WTSIZE)/((double)(pDspGen->SampleRate));
+    WTnextFrame();
+}
+
 double   WaveTable::WTSinValue()
 {
 	return pDspGen->SinWT[intWTptr];
@@ -66,6 +72,90 @@ double   WaveTable::WTSin3Value()
         while(!signbit(tmpwtptr-(double)WTSIZE))tmpwtptr-=(double)(WTSIZE);
         if(signbit(tmpwtptr))tmpwtptr=0;
         return pDspGen->SinWT[(int)tmpwtptr];
+}
+
+//----------
+
+double sinc_normalized(double val)
+{
+    if (val==0)return 1.0;
+    return (sin(M_PI*val)/(M_PI*val));
+}
+
+std::vector<kffsamp_t> JFilterDesign::LowPassHanning(double FrequencyCutOff, double SampleRate, int Length)
+{
+    std::vector<kffsamp_t> h;
+    if(Length<1)return h;
+    if(!(Length%2))Length++;
+    int j=1;
+    for(int i=(-(Length-1)/2);i<=((Length-1)/2);i++)
+    {
+        double w=0.5*(1.0-cos(2.0*M_PI*((double)j)/((double)(Length))));
+        h.push_back(w*(2.0*FrequencyCutOff/SampleRate)*sinc_normalized(2.0*FrequencyCutOff*((double)i)/SampleRate));
+        j++;
+    }
+
+    return h;
+
+/* in matlab this function is
+idx = (-(Length-1)/2:(Length-1)/2);
+hideal = (2*FrequencyCutOff/SampleRate)*sinc(2*FrequencyCutOff*idx/SampleRate);
+h = hanning(Length)' .* hideal;
+*/
+
+}
+
+//----------
+
+FMModulator::FMModulator(TSetGen *_pSetGen) :
+    pTDSPGen(new TDspGen(_pSetGen)),
+    pTDSPGenCarrier(new TDspGen(&ASetGen)),
+    pWaveTableCarrier(new WaveTable(pTDSPGenCarrier.get()))
+{
+    fir = new JFastFIRFilter;
+    input_output_buf.resize(512,0);
+    input_output_buf_ptr=0;
+    RefreshSettings(67500,7000,3500);
+}
+
+FMModulator::~FMModulator()
+{
+    delete fir;
+}
+
+double FMModulator::update(double &insignal)//say signal runs from -1 to 1
+{
+
+    //LP filter
+    double signal=input_output_buf[input_output_buf_ptr];
+    input_output_buf[input_output_buf_ptr]=insignal;
+    input_output_buf_ptr++;input_output_buf_ptr%=input_output_buf.size();
+    if(input_output_buf_ptr==0)fir->Update(input_output_buf.data(),input_output_buf.size());
+
+
+    //preemp
+    signal=preemp.Update(signal*0.5);
+
+    //return the signal just before the clipper
+    insignal=signal;
+
+    //fm modulate and clip the signal if needed
+    pWaveTableCarrier->WTnextFrame(clipper.Update(signal)*max_deviation);
+
+    //return modulated carrier signal
+    return pWaveTableCarrier->WTSinValue();
+}
+
+void FMModulator::RefreshSettings(double carrier_freq, double max_audio_input_frequency, double _max_deviation)
+{
+    maxinfreq=max_audio_input_frequency;
+    pTDSPGen->ResetSettings();
+    ASetGen.SampleRate=pTDSPGen->SampleRate;
+    ASetGen.Freq=carrier_freq;
+    max_deviation=_max_deviation;
+    pTDSPGenCarrier->ResetSettings();
+    pWaveTableCarrier->RefreshSettings();
+    fir->setKernel(JFilterDesign::LowPassHanning(max_audio_input_frequency,ASetGen.SampleRate,1024-1));//1001));
 }
 
 //----------
@@ -283,14 +373,14 @@ void  TDspGen::ResetSettings()
 
 //---fast FIR
 
-FastFIRFilter::FastFIRFilter(std::vector<kffsamp_t> &imp_responce,size_t &_nfft)
+FastFIRFilter::FastFIRFilter(std::vector<kffsamp_t> imp_responce,size_t &_nfft)
 {
     cfg=kiss_fastfir_alloc(imp_responce.data(),imp_responce.size(),&_nfft,0,0);
     nfft=_nfft;
     reset();
 }
 
-FastFIRFilter::FastFIRFilter(std::vector<kffsamp_t> &imp_responce)
+FastFIRFilter::FastFIRFilter(std::vector<kffsamp_t> imp_responce)
 {
     size_t _nfft=imp_responce.size()*4;//rule of thumb
     _nfft=pow(2.0,(ceil(log2(_nfft))));
@@ -500,3 +590,138 @@ void  RootRaisedCosine::create(double symbolrate, int firsize, double alpha, dou
 
 //-----
 
+//---fast FIR (should port old fast fir to new one todo)
+
+JFastFIRFilter::JFastFIRFilter()
+{
+    vector<kffsamp_t> tvect;
+    tvect.push_back(1.0);
+    nfft=2;
+    cfg=kiss_fastfir_alloc(tvect.data(),tvect.size(),&nfft,0,0);
+    reset();
+}
+
+int JFastFIRFilter::setKernel(vector<kffsamp_t> imp_responce)
+{
+    int _nfft=imp_responce.size()*4;//rule of thumb
+    _nfft=pow(2.0,(ceil(log2(_nfft))));
+    return setKernel(imp_responce,_nfft);
+}
+
+int JFastFIRFilter::setKernel(vector<kffsamp_t> imp_responce, int _nfft)
+{
+    if(!imp_responce.size())return nfft;
+    free(cfg);
+    _nfft=pow(2.0,(ceil(log2(_nfft))));
+    nfft=_nfft;
+    cfg=kiss_fastfir_alloc(imp_responce.data(),imp_responce.size(),&nfft,0,0);
+    reset();
+    return nfft;
+}
+
+void JFastFIRFilter::reset()
+{
+    remainder.assign(nfft*2,0);
+    idx_inbuf=0;
+    remainder_ptr=nfft;
+}
+
+void JFastFIRFilter::Update(vector<kffsamp_t> &data)
+{
+    Update(data.data(), data.size());
+}
+
+void JFastFIRFilter::Update(kffsamp_t *data,int Size)
+{
+
+    //ensure enough storage
+    if((inbuf.size()-idx_inbuf)<(size_t)Size)
+    {
+        inbuf.resize(Size+nfft);
+        outbuf.resize(Size+nfft);
+    }
+
+    //add data to storage
+    memcpy ( inbuf.data()+idx_inbuf, data, sizeof(kffsamp_t)*Size );
+    size_t nread=Size;
+
+    //fast fir of storage
+    size_t nwrite=kiss_fastfir(cfg, inbuf.data(), outbuf.data(),nread,&idx_inbuf);
+
+    int currentwantednum=Size;
+    int numfromremainder=min(currentwantednum,remainder_ptr);
+
+    //return as much as posible from remainder buffer
+    if(numfromremainder>0)
+    {
+        memcpy ( data, remainder.data(), sizeof(kffsamp_t)*numfromremainder );
+
+        currentwantednum-=numfromremainder;
+        data+=numfromremainder;
+
+        if(numfromremainder<remainder_ptr)
+        {
+            remainder_ptr-=numfromremainder;
+            memcpy ( remainder.data(), remainder.data()+numfromremainder, sizeof(kffsamp_t)*remainder_ptr );
+        } else remainder_ptr=0;
+    }
+
+    //then return stuff from output buffer
+    int numfromoutbuf=std::min(currentwantednum,(int)nwrite);
+    if(numfromoutbuf>0)
+    {
+        memcpy ( data, outbuf.data(), sizeof(kffsamp_t)*numfromoutbuf );
+        currentwantednum-=numfromoutbuf;
+        data+=numfromoutbuf;
+    }
+
+    //any left over is added to remainder buffer
+    if(((size_t)numfromoutbuf<nwrite)&&(nwrite>0))
+    {
+        memcpy ( remainder.data()+remainder_ptr, outbuf.data()+numfromoutbuf, sizeof(kffsamp_t)*(nwrite-numfromoutbuf) );
+        remainder_ptr+=(nwrite-numfromoutbuf);
+    }
+
+    //if currentwantednum>0 then some items were not changed, this should not happen
+    //we should anyways have enough to return but if we dont this happens. this should be avoided else a discontinuity of frames occurs. set remainder to zero and set remainder_ptr to nfft before running to avoid this
+    if(currentwantednum>0)
+    {
+        remainder_ptr+=currentwantednum;
+    }
+
+}
+
+JFastFIRFilter::~JFastFIRFilter()
+{
+    free(cfg);
+}
+
+//-----------
+
+//---------------------
+
+MovingAverage::MovingAverage()
+{
+    setSize(100);
+}
+
+void MovingAverage::setSize(int size)
+{
+    MASum=0;
+    MABuffer.resize(size,0.0);
+    MASz=MABuffer.size();
+    MAPtr=0;
+    Val=0;
+}
+
+double MovingAverage::Update(double sig)
+{
+    MASum=MASum-MABuffer[MAPtr];
+    MASum=MASum+sig;
+    MABuffer[MAPtr]=sig;
+    MAPtr++;MAPtr%=MASz;
+    Val=MASum/((double)MASz);
+    return Val;
+}
+
+//---------------------

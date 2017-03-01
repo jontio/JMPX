@@ -23,6 +23,8 @@ public:
     void loadsettings(JMPXInterface *pJMPX,FileLoader *fileloader);
     bool update_rt_music_title;
     bool quit_on_error;
+signals:
+    void Show_SCA_Volume_Meter_signal(bool show);
 private slots:
     void on_checkBox_rbds_clicked(bool checked);
     void on_horizontalSlider_monolevel_valueChanged(int value);
@@ -40,6 +42,8 @@ private slots:
     void on_spinBox_2A_percent_valueChanged(int arg1);
 
     void on_spinBox_5A_percent_valueChanged(int arg1);
+
+    void on_horizontalSlider_scalevel_valueChanged(int value);
 
 private:
     Ui::Options *ui;

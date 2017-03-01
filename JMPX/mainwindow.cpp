@@ -11,6 +11,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     setFixedSize(width(),height());
 
+    ui->scavolumemeter->setDirection(Volumemeter::Vertical);
     ui->lvolumemeter->setDirection(Volumemeter::Vertical);
     ui->rvolumemeter->setDirection(Volumemeter::Vertical);
     ui->outvolumemeter->setDirection(Volumemeter::Vertical);
@@ -18,6 +19,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //create options dialog.
     options = new Options(this);
+    connect(options,SIGNAL(Show_SCA_Volume_Meter_signal(bool)),this,SLOT(Show_SCA_Volume_Meter(bool)));
     if(QCoreApplication::arguments().last().toUpper()=="QUIT_ON_ERROR")options->quit_on_error=true;
 
     //load library
@@ -41,7 +43,6 @@ MainWindow::MainWindow(QWidget *parent) :
         if(pJMPX)
         {
             pJMPX->SetSampleRate(192000);
-            pJMPX->SetBufferFrames(8096);//adjust this for latency or for lost frames
         }
          else
          {
@@ -100,6 +101,7 @@ void MainWindow::updatedisplay()
 {
     if(!pJMPX)return;
     TSigStats *psigstats=pJMPX->GetSignalStats();
+    ui->scavolumemeter->setVolume(psigstats->scavol);
     ui->lvolumemeter->setVolume(psigstats->lvol);
     ui->rvolumemeter->setVolume(psigstats->rvol);
     ui->outvolumemeter->setVolume(psigstats->outvol);
@@ -117,6 +119,17 @@ void MainWindow::on_action_Options_triggered()
         songtitlecheck(nowplaying->rt_title);
     }
     updatelowrateinfo();
+}
+
+void MainWindow::Show_SCA_Volume_Meter(bool show)
+{
+    if(ui->groupBox_sca->isHidden()!=show)return;
+    int xshift=ui->groupBox_sca->pos().x()-ui->groupBox_in->pos().x();
+    if(show)xshift=-xshift;
+    ui->groupBox_out->move(ui->groupBox_out->pos().x()-xshift,ui->groupBox_out->pos().y());
+    ui->widget_therest->move(ui->widget_therest->pos().x()-xshift,ui->widget_therest->pos().y());
+    setFixedSize(width()-xshift,height());
+    ui->groupBox_sca->setVisible(show);
 }
 
 void MainWindow::volbarssetfixedequalwidth()
@@ -144,7 +157,6 @@ void MainWindow::on_checkBox_modulate_stateChanged(int state)
     if((!pJMPX->IsActive())&&(state))
     {
         pJMPX->SetSampleRate(192000);
-        pJMPX->SetBufferFrames(8096);//adjust this for latency or for lost frames
     }
     pJMPX->Active(state);
     if((state)&&(pJMPX->GotError()))
@@ -158,6 +170,7 @@ void MainWindow::on_checkBox_modulate_stateChanged(int state)
     }
     if(state)ptimer->start();
      else ptimer->stop();
+    ui->scavolumemeter->setVolume(0);
     ui->lvolumemeter->setVolume(0);
     ui->rvolumemeter->setVolume(0);
     ui->outvolumemeter->setVolume(0);
@@ -170,10 +183,10 @@ void MainWindow::on_action_About_triggered()
 {
     QMessageBox::about(this,"JMPX",""
                                      "<H1>Stereo and RDS encoder for FM transmitters</H1>"
-                                     "<H3>v2.0.1</H3>"
-                                     "<p>When connected to an FM transmitter via a soundcard this program allows you to transmit in stereo along with the ability to send information using RDS (Radio Data System) to the listeners. With RDS the listerners can see what your station is called and other usefull information.</p>"
+                                     "<H3>v2.0.2</H3>"
+                                     "<p>When connected to an FM transmitter via a soundcard this program allows you to transmit in stereo along with the ability to send information using RDS (Radio Data System) to the listeners. With RDS the listeners can see what your station is called and other useful information. SCA allows another mono sub carrier to be added to the signal that can be received with a special receiver.</p>"
                                      "<p>For more information about this application see <a href=\"http://jontio.zapto.org/hda1/paradise/jmpxencoder/jmpx.html\">http://jontio.zapto.org/hda1/paradise/jmpxencoder/jmpx.html</a>.</p>"
-                                     "<p>Jonti 2016</p>" );
+                                     "<p>Jonti 2017</p>" );
 }
 
 void MainWindow::on_actionAbout_Qt_triggered()

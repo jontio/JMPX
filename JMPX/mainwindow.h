@@ -44,6 +44,9 @@ private:
     FileLoader *fileloader;
 private slots:
     void volbarssetfixedequalwidth();
+    void Show_SCA_Volume_Meter(bool show);
+    void Show_SCA_Volume_Meter(){Show_SCA_Volume_Meter(true);}
+    void Hide_SCA_Volume_Meter(){Show_SCA_Volume_Meter(false);}
     void updatedisplay();
     void on_action_Options_triggered();
     void on_checkBox_modulate_stateChanged(int state);

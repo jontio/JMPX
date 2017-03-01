@@ -19,15 +19,20 @@ public:
     virtual bool IsActive()=0;
 
     virtual void SetSoundCard(int device)=0;
+    virtual void SetSoundCardSCA(int device)=0;
     virtual void SetSoundCardIn(int device)=0;
     virtual void SetSoundCardOut(int device)=0;
+    virtual bool SetSoundCardSCAName(const QString &name)=0;
     virtual bool SetSoundCardInName(const QString &name)=0;
     virtual bool SetSoundCardOutName(const QString &name)=0;
     virtual void SetSoundCardDefault()=0;
     virtual void SetSampleRate(int sampleRate)=0;
     virtual void SetBufferFrames(int bufferFrames)=0;
+    virtual int GetBufferFrames()=0;
+    virtual int GetSoundCardSCA()=0;
     virtual int GetSoundCardIn()=0;
     virtual int GetSoundCardOut()=0;
+    virtual QString GetSoundCardSCAName()=0;
     virtual QString GetSoundCardInName()=0;
     virtual QString GetSoundCardOutName()=0;
 
@@ -57,6 +62,14 @@ public:
     virtual double GetPilotLevel()=0;
     virtual void SetRDSLevel(double value)=0;
     virtual double GetRDSLevel()=0;
+    virtual void SetSCALevel(double value)=0;
+    virtual double GetSCALevel()=0;
+    virtual void SetSCAMaxDeviation(double value)=0;
+    virtual double GetSCAMaxDeviation()=0;
+    virtual void SetSCAMaxInputFrequency(double value)=0;
+    virtual double GetSCAMaxInputFrequency()=0;
+    virtual void SetSCACarrierFrequency(double value)=0;
+    virtual double GetSCACarrierFrequency()=0;
 
     //--RDS interface
 
