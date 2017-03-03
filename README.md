@@ -1,5 +1,5 @@
 #JMPX v2
-A Stereo encoder for FM transmitters now with RDS support.
+A Stereo encoder for FM transmitters now with RDS and SCA support.
 
 ![Screenshot of JMPX on Linux](JMPX/images/screenshot-linux.png)
 
@@ -26,5 +26,5 @@ The transmitter needs to not have any low pass filter on its input from the soun
 
 For testing it is possible to use a simple one transistor FM transmitter design but signal quality and frequency stability are likely to be problems.
 
-Jonti 2015
+Jonti 2017
 http://jontio.zapto.org

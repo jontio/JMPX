@@ -3,6 +3,8 @@
 
 //this needs winamp compatible API media players. I've tested mediamonkey
 
+//added a hack for VLC
+
 #include <QObject>
 #include <QTimer>
 #include <QByteArray>
@@ -14,13 +16,13 @@ class NowPlaying : public QObject
 public:
     explicit NowPlaying(QObject *parent = 0);
     QString rt_title;
+    QByteArray rt_title_ba;
+    bool TitleSetByWindowEnum;
 signals:
     void songtitlechanged(const QString &title);
 public slots:
 private slots:
     void songtitlecheck();
-private:
-    QByteArray rt_title_ba;
 };
 
 #endif // NOWPLAYING_H

@@ -73,6 +73,9 @@ private:
     double level38k;
     bool compositeclipper;
 
+    JFastFIRFilter *rdsbpf;
+
+
 public:
 
     void SetEnableStereo(bool enable);

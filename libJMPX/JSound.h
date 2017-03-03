@@ -5,7 +5,7 @@
 //---------------------------------------------------------------------------
 
 #include "Definitions.h"
-#include "../rtaudio-4.1.1/RtAudio.h"
+#include "../rtaudio-4.1.2/RtAudio.h"
 #include <QObject>
 #include <QDebug>
 #include <QThread>

@@ -32,8 +32,15 @@
 #include "Definitions.h"
 
 
-#define WTSIZE 8000
-#define WTSIZE_1 7999
+
+//OK signal
+//#define WTSIZE 8000
+//#define WTSIZE_1 7999
+
+//Insanely good signal
+#define WTSIZE 16000
+#define WTSIZE_1 15999
+#define WT_Interpolate
 
 using namespace std;
 
@@ -111,6 +118,8 @@ class JFilterDesign
 public:
     JFilterDesign(){}
     static std::vector<kffsamp_t> LowPassHanning(double FrequencyCutOff, double SampleRate, int Length);
+    static std::vector<kffsamp_t> HighPassHanning(double FrequencyCutOff, double SampleRate, int Length);
+    static std::vector<kffsamp_t> BandPassHanning(double LowFrequencyCutOff,double HighFrequencyCutOff, double SampleRate, int Length);
 private:
 };
 
@@ -264,6 +273,7 @@ public:
     int setKernel(vector<kffsamp_t> imp_responce);
     void Update(kffsamp_t *data,int Size);
     void Update(vector<kffsamp_t> &data);
+    double Update_Single(double signal);
     void reset();
     ~JFastFIRFilter();
 private:
@@ -274,12 +284,15 @@ private:
     std::vector<kffsamp_t> outbuf;
     std::vector<kffsamp_t> remainder;
     int remainder_ptr;
+
+    //for single byte at a time.
+    std::vector<double> single_input_output_buf;
+    int single_input_output_buf_ptr;
 };
 
 //-------
 
 //-----FM modulator for SCA
-
 
 class FMModulator
 {
@@ -287,11 +300,18 @@ public:
     FMModulator(TSetGen *_pSetGen);
     ~FMModulator();
     double update(double &insignal);
-    void RefreshSettings(double carrier_freq, double max_audio_input_frequency, double max_deviation);
+    void RefreshSettings(double carrier_freq, double max_audio_input_frequency, double max_deviation, double ouput_bandwidth);
+    void RefreshSettings(double carrier_freq, double max_audio_input_frequency, double max_deviation)
+    {
+        //convenience function.
+        //sets output bandwith using carson's rule
+         RefreshSettings(carrier_freq,max_audio_input_frequency,max_deviation, 2.0*(max_audio_input_frequency+max_deviation));
+    }
     void SetTc(TimeConstant timeconst){preemp.SetTc(timeconst);}
     TimeConstant GetTc(){return preemp.GetTc();}
 private:
     double max_deviation;
+    double ouput_bandwidth;
     TSetGen ASetGen;
     std::auto_ptr< TDspGen > pTDSPGen;
     std::auto_ptr< TDspGen > pTDSPGenCarrier;
@@ -304,10 +324,7 @@ private:
 
     PreEmphasis preemp;
 
-    std::vector<double> input_output_buf;
-    int input_output_buf_ptr;
-
-
+    JFastFIRFilter *outputbpf;
 };
 
 //-------------------
@@ -352,7 +369,12 @@ public:
         expo_smoothing=_expo_smoothing;
         ma.setSize(movingavesize);
     }
-
+    void zero()
+    {
+        vol=0;
+        holdcnt=0;
+        t_vol=0;
+    }
     double update(double signal)
     {
         signal=fabs(signal);

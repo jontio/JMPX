@@ -9,7 +9,7 @@ QT       -= gui
 TARGET = libJMPX
 TEMPLATE = lib
 
-INCLUDEPATH += ../rtaudio-4.1.1/include \
+INCLUDEPATH += ../rtaudio-4.1.2/include \
     ../kiss_fft130
 
 DEFINES += JMPX_LIBRARY \
@@ -39,7 +39,7 @@ macx {
 SOURCES += libJMPX.cpp \
     JSound.cpp \
     JDSP.cpp \
-    ../rtaudio-4.1.1/RtAudio.cpp \
+    ../rtaudio-4.1.2/RtAudio.cpp \
     ../kiss_fft130/tools/kiss_fastfir.c \
     ../kiss_fft130/kiss_fft.c \
     ../kiss_fft130/tools/kiss_fftr.c \
@@ -50,7 +50,7 @@ HEADERS += libJMPX.h \
     JSound.h \
     JDSP.h \
     JMPXInterface.h \
-    ../rtaudio-4.1.1/RtAudio.h \
+    ../rtaudio-4.1.2/RtAudio.h \
     ../kiss_fft130/tools/kiss_fftr.h \
     ../kiss_fft130/tools/kiss_fastfir.h \
     ../kiss_fft130/_kiss_fft_guts.h \
@@ -94,4 +94,4 @@ DISTFILES += \
     ../kiss_fft130/TIPS \
     ../kiss_fft130/CHANGELOG \
     ../kiss_fft130/COPYING \
-    ../rtaudio-4.1.1/readme
+    ../rtaudio-4.1.2/readme

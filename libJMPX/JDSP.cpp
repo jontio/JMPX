@@ -55,23 +55,58 @@ void WaveTable::WTnextFrame(double offset_in_hz)
 
 double   WaveTable::WTSinValue()
 {
-	return pDspGen->SinWT[intWTptr];
+#ifndef WT_Interpolate
+    return pDspGen->SinWT[intWTptr];
+#endif
+
+#ifdef WT_Interpolate
+    //simple interpolation coule be used if wanted
+    double prompt=pDspGen->SinWT[intWTptr];
+    int i=intWTptr+1;i%=WTSIZE;
+    double late=pDspGen->SinWT[i];
+    double rem=WTptr-((double)intWTptr);
+    return (prompt*(1.0-rem)+late*rem);
+#endif
 }
 
 double   WaveTable::WTSin2Value()
 {
-        double tmpwtptr=WTptr*2.0;
-    	while(!signbit(tmpwtptr-(double)WTSIZE))tmpwtptr-=(double)(WTSIZE);
-    	if(signbit(tmpwtptr))tmpwtptr=0;
-		return pDspGen->SinWT[(int)tmpwtptr];
+    double tmpwtptr=WTptr*2.0;
+    while(!signbit(tmpwtptr-(double)WTSIZE))tmpwtptr-=(double)(WTSIZE);
+    if(signbit(tmpwtptr))tmpwtptr=0;
+#ifndef WT_Interpolate
+    return pDspGen->SinWT[(int)tmpwtptr];
+#endif
+
+#ifdef WT_Interpolate
+    //simple interpolation coule be used if wanted
+    int tintWTptr=(int)tmpwtptr;
+    double prompt=pDspGen->SinWT[tintWTptr];
+    int i=tintWTptr+1;i%=WTSIZE;
+    double late=pDspGen->SinWT[i];
+    double rem=tmpwtptr-((double)tintWTptr);
+    return (prompt*(1.0-rem)+late*rem);
+#endif
 }
 
 double   WaveTable::WTSin3Value()
 {
-        double tmpwtptr=WTptr*3.0;
-        while(!signbit(tmpwtptr-(double)WTSIZE))tmpwtptr-=(double)(WTSIZE);
-        if(signbit(tmpwtptr))tmpwtptr=0;
-        return pDspGen->SinWT[(int)tmpwtptr];
+    double tmpwtptr=WTptr*3.0;
+    while(!signbit(tmpwtptr-(double)WTSIZE))tmpwtptr-=(double)(WTSIZE);
+    if(signbit(tmpwtptr))tmpwtptr=0;
+#ifndef WT_Interpolate
+    return pDspGen->SinWT[(int)tmpwtptr];
+#endif
+
+#ifdef WT_Interpolate
+    //simple interpolation coule be used if wanted
+    int tintWTptr=(int)tmpwtptr;
+    double prompt=pDspGen->SinWT[tintWTptr];
+    int i=tintWTptr+1;i%=WTSIZE;
+    double late=pDspGen->SinWT[i];
+    double rem=tmpwtptr-((double)tintWTptr);
+    return (prompt*(1.0-rem)+late*rem);
+#endif
 }
 
 //----------
@@ -105,6 +140,47 @@ h = hanning(Length)' .* hideal;
 
 }
 
+std::vector<kffsamp_t> JFilterDesign::HighPassHanning(double FrequencyCutOff, double SampleRate, int Length)
+{
+    std::vector<kffsamp_t> h;
+    if(Length<1)return h;
+    if(!(Length%2))Length++;
+
+    std::vector<kffsamp_t> h1;
+    std::vector<kffsamp_t> h2;
+    h2.assign(Length,0);
+    h2[(Length-1)/2]=1.0;
+
+    h1=LowPassHanning(FrequencyCutOff,SampleRate,Length);
+    if((h1.size()==(size_t)Length)&&(h2.size()==(size_t)Length))
+    {
+        for(int i=0;i<Length;i++)h.push_back(h2[i]-h1[i]);
+    }
+
+    return h;
+}
+
+std::vector<kffsamp_t> JFilterDesign::BandPassHanning(double LowFrequencyCutOff,double HighFrequencyCutOff, double SampleRate, int Length)
+{
+    std::vector<kffsamp_t> h;
+    if(Length<1)return h;
+    if(!(Length%2))Length++;
+
+    std::vector<kffsamp_t> h1;
+    std::vector<kffsamp_t> h2;
+
+    h2=LowPassHanning(HighFrequencyCutOff,SampleRate,Length);
+    h1=LowPassHanning(LowFrequencyCutOff,SampleRate,Length);
+
+    if((h1.size()==(size_t)Length)&&(h2.size()==(size_t)Length))
+    {
+        for(int i=0;i<Length;i++)h.push_back(h2[i]-h1[i]);
+    }
+
+    return h;
+}
+
+
 //----------
 
 FMModulator::FMModulator(TSetGen *_pSetGen) :
@@ -113,25 +189,21 @@ FMModulator::FMModulator(TSetGen *_pSetGen) :
     pWaveTableCarrier(new WaveTable(pTDSPGenCarrier.get()))
 {
     fir = new JFastFIRFilter;
-    input_output_buf.resize(512,0);
-    input_output_buf_ptr=0;
+    outputbpf = new JFastFIRFilter;
     RefreshSettings(67500,7000,3500);
 }
 
 FMModulator::~FMModulator()
 {
     delete fir;
+    delete outputbpf;
 }
 
 double FMModulator::update(double &insignal)//say signal runs from -1 to 1
 {
 
     //LP filter
-    double signal=input_output_buf[input_output_buf_ptr];
-    input_output_buf[input_output_buf_ptr]=insignal;
-    input_output_buf_ptr++;input_output_buf_ptr%=input_output_buf.size();
-    if(input_output_buf_ptr==0)fir->Update(input_output_buf.data(),input_output_buf.size());
-
+    double signal=fir->Update_Single(insignal);
 
     //preemp
     signal=preemp.Update(signal*0.5);
@@ -142,13 +214,14 @@ double FMModulator::update(double &insignal)//say signal runs from -1 to 1
     //fm modulate and clip the signal if needed
     pWaveTableCarrier->WTnextFrame(clipper.Update(signal)*max_deviation);
 
-    //return modulated carrier signal
-    return pWaveTableCarrier->WTSinValue();
+    //return filtered modulated carrier signal
+    return outputbpf->Update_Single(pWaveTableCarrier->WTSinValue());
 }
 
-void FMModulator::RefreshSettings(double carrier_freq, double max_audio_input_frequency, double _max_deviation)
+void FMModulator::RefreshSettings(double carrier_freq, double max_audio_input_frequency, double _max_deviation, double _ouput_bandwidth)
 {
     maxinfreq=max_audio_input_frequency;
+    ouput_bandwidth=_ouput_bandwidth;
     pTDSPGen->ResetSettings();
     ASetGen.SampleRate=pTDSPGen->SampleRate;
     ASetGen.Freq=carrier_freq;
@@ -156,6 +229,7 @@ void FMModulator::RefreshSettings(double carrier_freq, double max_audio_input_fr
     pTDSPGenCarrier->ResetSettings();
     pWaveTableCarrier->RefreshSettings();
     fir->setKernel(JFilterDesign::LowPassHanning(max_audio_input_frequency,ASetGen.SampleRate,1024-1));//1001));
+    outputbpf->setKernel(JFilterDesign::BandPassHanning(ASetGen.Freq-ouput_bandwidth/2.0,ASetGen.Freq+ouput_bandwidth/2.0,ASetGen.SampleRate,1024-1));
 }
 
 //----------
@@ -624,12 +698,25 @@ void JFastFIRFilter::reset()
     remainder.assign(nfft*2,0);
     idx_inbuf=0;
     remainder_ptr=nfft;
+
+    single_input_output_buf_ptr=0;
+    single_input_output_buf.assign(nfft,0);
 }
 
 void JFastFIRFilter::Update(vector<kffsamp_t> &data)
 {
     Update(data.data(), data.size());
 }
+
+double JFastFIRFilter::Update_Single(double signal)
+{
+    double out_signal=single_input_output_buf[single_input_output_buf_ptr];
+    single_input_output_buf[single_input_output_buf_ptr]=signal;
+    single_input_output_buf_ptr++;single_input_output_buf_ptr%=single_input_output_buf.size();
+    if(single_input_output_buf_ptr==0)Update(single_input_output_buf.data(),single_input_output_buf.size());
+    return out_signal;
+}
+
 
 void JFastFIRFilter::Update(kffsamp_t *data,int Size)
 {

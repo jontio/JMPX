@@ -51,12 +51,17 @@ JMPXEncoder::JMPXEncoder(QObject *parent):
     rPeak.setSettings(40,0.01,0.8,0.0001,100,false);
     outPeak.setSettings(160,0.01/4.0,0.95,0.0001/4.0,100,false);
 
+    rdsbpf = new JFastFIRFilter;
+    rdsbpf->setKernel(JFilterDesign::BandPassHanning(57000-2400,57000+2400,pJCSound->sampleRate,512-1));
+
+
 }
 
 JMPXEncoder::~JMPXEncoder()
 {
         pJCSound->Active(false);
         pJCSound_SCA->Active(false);
+        delete rdsbpf;
 }
 
 void JMPXEncoder::Active(bool Enabled)
@@ -81,6 +86,9 @@ void JMPXEncoder::Active(bool Enabled)
             rt_dynamic.clear();
             rds->set_rt(rt_default);
 
+            //4.8khz rds bpf
+            rdsbpf->setKernel(JFilterDesign::BandPassHanning(57000-2400,57000+2400,pJCSound->sampleRate,512-1));
+
             connect(pJCSound,SIGNAL(SoundEvent(double*,double*,int)),this,SLOT(Update(double*,double*,int)),Qt::DirectConnection);//DirectConnection!!!
             connect(pJCSound_SCA,SIGNAL(SoundEvent(double*,double*,int)),this,SLOT(Update_SCA(double*,double*,int)),Qt::DirectConnection);//DirectConnection!!!
 
@@ -100,6 +108,10 @@ void JMPXEncoder::Active(bool Enabled)
         }
         pJCSound->Active(Enabled);
         pJCSound_SCA->Active(SCA_enabled&&Enabled);
+        scaPeak.zero();
+        lPeak.zero();
+        rPeak.zero();
+        outPeak.zero();
 }
 
 void JMPXEncoder::SetEnableStereo(bool enable)
@@ -185,7 +197,8 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int Size)
             rval=clipper.Update(rval);
 
             DataOut[i]=monolevel*0.608*(lval+rval);//sum at 0Hz
-            if(RDS_enabled)DataOut[i]+=rdslevel*pWaveTable->WTSin3Value()*rds->outputsignal[i/2];//RDS at 57kHz
+
+            if(RDS_enabled)DataOut[i]+=rdslevel*rdsbpf->Update_Single(pWaveTable->WTSin3Value()*rds->outputsignal[i/2]);//RDS at 57kHz
 
             //SCA start
             if(SCA_enabled)
@@ -267,7 +280,7 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int Size)
         DataOut[i]=monolevel*0.608*(lval+rval);//sum at 0Hz
         DataOut[i]+=level38k*0.608*(pWaveTable->WTSin2Value())*(lval-rval);//diff at 38kHz
         DataOut[i]+=pilotlevel*pWaveTable->WTSinValue();//19kHz pilot
-        if(RDS_enabled)DataOut[i]+=rdslevel*pWaveTable->WTSin3Value()*rds->outputsignal[i/2];//RDS at 57kHz
+        if(RDS_enabled)DataOut[i]+=rdslevel*rdsbpf->Update_Single(pWaveTable->WTSin3Value()*rds->outputsignal[i/2]);//RDS at 57kHz
 
         //SCA start
         if(SCA_enabled)
