@@ -47,7 +47,7 @@ void NowPlaying::songtitlecheck()
 { 
 
     //find player and check we are playing
-    HWND hwndWinamp = FindWindow(L"VLC",NULL);//(L"Winamp v1.x",NULL);
+    HWND hwndWinamp = FindWindow(L"Winamp v1.x",NULL);
     if((hwndWinamp==NULL)||(SendMessage(hwndWinamp,WM_USER, (WPARAM)NULL,(LPARAM)104)!=1))
     {
 
