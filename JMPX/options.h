@@ -45,8 +45,13 @@ private slots:
 
     void on_horizontalSlider_scalevel_valueChanged(int value);
 
+    void on_comboBox_dsca_mode_currentIndexChanged(int index);
+
+    void on_horizontalSlider_noise_valueChanged(int value);
+
 private:
     Ui::Options *ui;
+    void updateDSCADescription(int mode);
 };
 
 #endif // OPTIONS_H

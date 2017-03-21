@@ -1,14 +1,13 @@
 #ifndef DEFINITIONS_H
 #define DEFINITIONS_H
 
-using namespace std;
-
 struct TSigStats
 {
     double scavol;
     double lvol;
 	double rvol;
 	double outvol;
+    double opusbufferuseagepercent;
 };
 
 enum TimeConstant {WORLD,USA,NONE};
@@ -35,10 +34,8 @@ class TSetGen
 public:
          TSetGen()
         {
-                Freq=4800;            // frequency
                 SampleRate=44100;
         }
-        double Freq;            // frequency
         int SampleRate;
 };
 

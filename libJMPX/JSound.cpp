@@ -10,6 +10,8 @@
 
         options.streamName="JMPX";
 
+        audioformat=RTAUDIO_FLOAT64;
+
         oParameters.deviceId = AnRtAudio.getDefaultOutputDevice();
         oParameters.nChannels = 2;
         oParameters.firstChannel = 0;
@@ -124,20 +126,23 @@ void TJCSound::Active(bool State)
             SetSoundCardInByName();
             SetSoundCardOutByName();
 
-        	if(bufferFrames%2)bufferFrames++; //make sure bufferFrames is even
-
             //10 tries as on JACK sometimes stream wont open first time. Don't know why. This should solve the problem.
             int i=0;
             tryagain:
 
-            //SCA tests
-            if(oParameters.nChannels>0&&iParameters.nChannels>0)AnRtAudio.openStream( &oParameters,  &iParameters, RTAUDIO_FLOAT64,sampleRate, &bufferFrames, Dispatcher, (void *)this, &options );
+            //select dispatcher
+            RtAudioCallback pDispatcher=TJCSound::Dispatcher_double;
+            if(audioformat==RTAUDIO_FLOAT64)pDispatcher=TJCSound::Dispatcher_double;
+            if(audioformat==RTAUDIO_SINT32)pDispatcher=TJCSound::Dispatcher_qint32;
+            if(audioformat==RTAUDIO_SINT16)pDispatcher=TJCSound::Dispatcher_qint16;
+
+            //Open stream
+            if(oParameters.nChannels>0&&iParameters.nChannels>0)AnRtAudio.openStream( &oParameters,  &iParameters, audioformat,sampleRate, &bufferFrames, pDispatcher, (void *)this, &options );
              else
              {
-                if(oParameters.nChannels>0)AnRtAudio.openStream( &oParameters,  NULL, RTAUDIO_FLOAT64,sampleRate, &bufferFrames, Dispatcher, (void *)this, &options );
-                if(iParameters.nChannels>0)AnRtAudio.openStream( NULL,  &iParameters, RTAUDIO_FLOAT64,sampleRate, &bufferFrames, Dispatcher, (void *)this, &options );
+                if(oParameters.nChannels>0)AnRtAudio.openStream( &oParameters,  NULL, audioformat,sampleRate, &bufferFrames, pDispatcher, (void *)this, &options );
+                if(iParameters.nChannels>0)AnRtAudio.openStream( NULL,  &iParameters, audioformat,sampleRate, &bufferFrames, pDispatcher, (void *)this, &options );
              }
-            //
 
             i++;
             try{AnRtAudio.startStream();}

@@ -6,8 +6,14 @@
 #include "JMPXInterface.h"
 #include "JDSP.h"
 #include "JSound.h"
+#include "dataformatter.h"
 
 #include "rds.h"
+
+#include <random>
+
+#include "oqpskmodulator.h"
+#include "opus/opus.h"
 
 class JMPXEncoder : public JMPXInterface
 {
@@ -17,6 +23,11 @@ public:
     ~JMPXEncoder();
 
 private:
+
+    //noise tests
+    std::default_random_engine generator;
+    double noiselevel;
+
     TJCSound *pJCSound;
     TJCSound *pJCSound_SCA;
 
@@ -26,7 +37,29 @@ private:
     std::auto_ptr< TDspGen > pTDspGen;
     std::auto_ptr< WaveTable > pWaveTable;
 
-//SCA things
+    //DSCA
+    bool dsca_enable_send_rds;
+
+    //OQPSK modulator
+    OQPSKModulator *pOQPSKModulator;
+    DataFormatter oqpskdataformatter;
+    //
+
+    //opus
+    #define FRAME_SIZE 2880
+    #define SAMPLE_RATE 48000
+    #define CHANNELS 2
+    #define BITRATE 9000
+    #define MAX_FRAME_SIZE 6*960
+    #define MAX_PACKET_SIZE (3*1276)
+    OpusEncoder *encoder;
+    opus_int16 in[FRAME_SIZE*CHANNELS];
+    unsigned char cbits[MAX_PACKET_SIZE];
+    int nbBytes;
+    bool SCA_opus;
+    //
+
+    //SCA
     std::auto_ptr< FMModulator > pFMModulator;
     QVector<double> SCA_buffer;
     int SCA_buf_ptr_head;
@@ -39,7 +72,7 @@ private:
     double SCA_Level;
     double SCA_CarrierFrequency;
     double SCA_MaxInputFrequency;
-//
+    //
 
     bool stereo;
     bool RDS_enabled;
@@ -61,6 +94,7 @@ private:
     PeakMeasure scaPeak;
     PeakMeasure lPeak;
     PeakMeasure rPeak;
+    PeakMeasure opusBufferUsagePeak;
 
     RDS *rds;
 
@@ -75,7 +109,6 @@ private:
 
     JFastFIRFilter *rdsbpf;
 
-
 public:
 
     void SetEnableStereo(bool enable);
@@ -86,6 +119,229 @@ public:
 
     void SetEnableSCA(bool enable){SCA_enabled=enable;}
     bool GetEnableSCA(){return SCA_enabled;}
+
+    //Developer
+    void SetNoiseLevel(double value)
+    {
+        noiselevel=value;
+    }
+    double GetNoiseLevel()
+    {
+        return noiselevel;
+    }
+
+    //DSCA mode setting
+    void SetDSCAMode(int mode)
+    {
+        callback_mutex.lock();
+        if(mode==(int)oqpskdataformatter.getMode()){callback_mutex.unlock();return;}
+        oqpskdataformatter.setMode((DataFormatter::Mode)mode);
+        callback_mutex.unlock();
+    }
+    int GetDSCAMode()
+    {
+        callback_mutex.lock();
+        int mode=(int)oqpskdataformatter.getMode();
+        callback_mutex.unlock();
+        return mode;
+    }
+    void SetDSCASendRDS(bool enable)
+    {
+        dsca_enable_send_rds=enable;
+    }
+    bool GetDSCASendRDS()
+    {
+        return dsca_enable_send_rds;
+    }
+
+    //OQPSK settings
+    void SetOQPSKExcess(double excess)
+    {
+        callback_mutex.lock();
+        OQPSKModulator::Settings settings=pOQPSKModulator->getSettings();
+        if(settings.alpha==excess){callback_mutex.unlock();return;}
+        settings.alpha=excess;
+        pOQPSKModulator->RefreshSettings(settings);
+        callback_mutex.unlock();
+    }
+    double GetOQPSKExcess()
+    {
+        callback_mutex.lock();
+        OQPSKModulator::Settings settings=pOQPSKModulator->getSettings();
+        callback_mutex.unlock();
+        return settings.alpha;
+    }
+    void SetOQPSKBitrate(double bitrate)
+    {
+        callback_mutex.lock();
+        OQPSKModulator::Settings settings=pOQPSKModulator->getSettings();
+        if(settings.bitrate==bitrate){callback_mutex.unlock();return;}
+        settings.bitrate=bitrate;
+        pOQPSKModulator->RefreshSettings(settings);
+        callback_mutex.unlock();
+    }
+    double GetOQPSKBitrate()
+    {
+        callback_mutex.lock();
+        OQPSKModulator::Settings settings=pOQPSKModulator->getSettings();
+        callback_mutex.unlock();
+        return settings.bitrate;
+    }
+    void SetOQPSKCarrierFreq(double carrier_freq)
+    {
+        callback_mutex.lock();
+        OQPSKModulator::Settings settings=pOQPSKModulator->getSettings();
+        if(settings.carrier_freq==carrier_freq){callback_mutex.unlock();return;}
+        settings.carrier_freq=carrier_freq;
+        pOQPSKModulator->RefreshSettings(settings);
+        callback_mutex.unlock();
+
+        //if(SCA_opus&&pJCSound_SCA->IsActive())
+         //   pOQPSKModulator->StartSpooling();
+
+    }
+    double GetOQPSKCarrierFreq()
+    {
+        callback_mutex.lock();
+        OQPSKModulator::Settings settings=pOQPSKModulator->getSettings();
+        callback_mutex.unlock();
+        return settings.carrier_freq;
+    }
+
+    //Opus settings
+    void SetSCAopus(bool enable)
+    {
+        if(SCA_opus==enable&&pJCSound_SCA->IsActive())return;
+        SCA_opus=enable;
+        bool wasactive=pJCSound_SCA->IsActive();
+        pJCSound_SCA->Active(false);
+
+        oqpskdataformatter.clearBuffer();
+
+        disconnect(pJCSound_SCA,SIGNAL(SoundEvent(double*,double*,int)),this,SLOT(Update_SCA(double*,double*,int)));
+        disconnect(pJCSound_SCA,SIGNAL(SoundEvent(qint16*,qint16*,int)),this,SLOT(Update_opusSCA(qint16*,qint16*,int)));
+
+        if(SCA_opus){pJCSound_SCA->audioformat=RTAUDIO_SINT16;connect(pJCSound_SCA,SIGNAL(SoundEvent(qint16*,qint16*,int)),this,SLOT(Update_opusSCA(qint16*,qint16*,int)),Qt::DirectConnection);}//DirectConnection!!!
+         else {pJCSound_SCA->audioformat=RTAUDIO_FLOAT64;connect(pJCSound_SCA,SIGNAL(SoundEvent(double*,double*,int)),this,SLOT(Update_SCA(double*,double*,int)),Qt::DirectConnection);}//DirectConnection!!!
+        pJCSound_SCA->Active(wasactive);
+
+        if(SCA_opus&&pJCSound_SCA->IsActive())pOQPSKModulator->StartSpooling();
+         else pOQPSKModulator->StopSpooling();
+
+    }
+    bool GetSCAopus(){return SCA_opus;}
+    void SetOpusBitRate(int bitrate)
+    {
+        callback_mutex.lock();
+        int current_bitrate;
+        opus_encoder_ctl(encoder, OPUS_GET_BITRATE(&current_bitrate));
+        if(bitrate==current_bitrate)
+        {
+            callback_mutex.unlock();
+            return;
+        }
+        opus_encoder_ctl(encoder, OPUS_SET_BITRATE(bitrate));
+        callback_mutex.unlock();
+    }
+    int  GetOpusBitRate()
+    {
+        callback_mutex.lock();
+        int rate;
+        opus_encoder_ctl(encoder, OPUS_GET_BITRATE(&rate));
+        callback_mutex.unlock();
+        return rate;
+    }
+    void SetOpusApplication(int application)
+    {
+        //for some reasion opus doesnt alwas allow you to change the application after it is created. is this a bug?
+        //this is a work around but i think i should just remove this function as settings could be lost
+        callback_mutex.lock();
+        int current_application;
+        opus_encoder_ctl(encoder, OPUS_GET_APPLICATION(&current_application));
+        if(application==current_application)
+        {
+            callback_mutex.unlock();
+            return;
+        }
+
+        int rate;
+        opus_encoder_ctl(encoder, OPUS_GET_BITRATE(&rate));
+
+        int current_vbr;
+        opus_encoder_ctl(encoder, OPUS_GET_VBR(&current_vbr));
+
+        int maxbandwidth;
+        opus_encoder_ctl(encoder, OPUS_GET_MAX_BANDWIDTH(&maxbandwidth));
+
+        opus_encoder_destroy(encoder);
+        int err;
+        encoder = opus_encoder_create(SAMPLE_RATE, CHANNELS, application,&err);
+        if (err<0)qDebug()<<"failed to create opus encoder application: "<<opus_strerror(err);
+
+        opus_encoder_ctl(encoder, OPUS_SET_BITRATE(rate));
+        opus_encoder_ctl(encoder, OPUS_SET_VBR(current_vbr));
+        opus_encoder_ctl(encoder, OPUS_SET_MAX_BANDWIDTH(maxbandwidth));
+
+        callback_mutex.unlock();
+        if (err<0)qDebug()<<"failed to set application: "<<opus_strerror(err);
+
+        //opus_encoder_ctl(encoder, OPUS_SET_APPLICATION(application));
+        //opus_encoder_ctl(encoder, OPUS_GET_APPLICATION(&application));
+        //qDebug()<<"app set to="<<application;
+    }
+    int GetOpusApplication()
+    {
+        callback_mutex.lock();
+        int application;
+        opus_encoder_ctl(encoder, OPUS_GET_APPLICATION(&application));
+        callback_mutex.unlock();
+        return application;
+    }
+    void SetOpusVRB(bool enable)
+    {
+        callback_mutex.lock();
+
+        int current_vbr;
+        opus_encoder_ctl(encoder, OPUS_GET_VBR(&current_vbr));
+        if(current_vbr==enable)
+        {
+            callback_mutex.unlock();
+            return;
+        }
+
+        opus_encoder_ctl(encoder, OPUS_SET_VBR(enable));
+        callback_mutex.unlock();
+    }
+    bool GetOpusVRB()
+    {
+        callback_mutex.lock();
+        int enabled;
+        opus_encoder_ctl(encoder, OPUS_GET_VBR(&enabled));
+        callback_mutex.unlock();
+        if(enabled)return true;
+        else return false;
+    }
+    void SetOpusBandwidth(int bandwidth)
+    {
+        callback_mutex.lock();
+        int current_bandwidth;
+        opus_encoder_ctl(encoder, OPUS_GET_BANDWIDTH(&current_bandwidth));
+        if(bandwidth==current_bandwidth)
+        {
+            callback_mutex.unlock();
+            return;
+        }
+        opus_encoder_ctl(encoder, OPUS_SET_BANDWIDTH(bandwidth));
+        callback_mutex.unlock();
+    }
+    int GetOpusBandwidth()
+    {
+        callback_mutex.lock();
+        int bandwidth;
+        opus_encoder_ctl(encoder, OPUS_GET_BANDWIDTH(&bandwidth));
+        callback_mutex.unlock();
+        return bandwidth;
+    }
 
     QString GetSoundCardSCAName()
     {
@@ -356,16 +612,21 @@ public:
 private slots:
 
     //output callback (fast 192000)
-    void Update(double *DataIn,double *DataOut, int Size);
+    void Update(double *DataIn, double *DataOut, int nFrames);
 
     //SCA input callback (slow 48000)
-    void Update_SCA(double *DataIn,double *DataOut, int Size);
+    void Update_SCA(double *DataIn,double *DataOut, int nFrames);
     //
+
+    //opusSCA input callback (slow 48000)
+    void Update_opusSCA(qint16 *DataIn, qint16 *DataOut, int nFrames);
+
+    void DSCAsendRds();
 
 private:
     InterleavedStereo16500Hz192000bpsFilter stereofir;//fast fir LPF
 private slots:
-
+    void onCallForMoreData(int maxbitswanted);
 };
 
 #endif	// LIBJMPX_H

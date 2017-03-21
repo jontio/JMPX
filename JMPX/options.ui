@@ -602,7 +602,7 @@
         </rect>
        </property>
        <property name="currentIndex">
-        <number>1</number>
+        <number>2</number>
        </property>
        <item>
         <property name="text">
@@ -617,6 +617,11 @@
        <item>
         <property name="text">
          <string>16384</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>32768</string>
         </property>
        </item>
       </widget>
@@ -1205,6 +1210,527 @@
        </widget>
       </widget>
      </widget>
+     <widget class="QWidget" name="DSCA">
+      <attribute name="title">
+       <string>Digital SCA</string>
+      </attribute>
+      <widget class="QCheckBox" name="checkBox_dsca_enable">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>20</y>
+         <width>90</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="toolTip">
+        <string>Use Digital SCA rather than analog SCA</string>
+       </property>
+       <property name="text">
+        <string>Enable</string>
+       </property>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_5">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>230</y>
+         <width>451</width>
+         <height>131</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Opus settings</string>
+       </property>
+       <widget class="QSpinBox" name="spinBox_opus_bitrate">
+        <property name="geometry">
+         <rect>
+          <x>130</x>
+          <y>90</y>
+          <width>131</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Opus bit stream rate</string>
+        </property>
+        <property name="frame">
+         <bool>false</bool>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+        <property name="buttonSymbols">
+         <enum>QAbstractSpinBox::NoButtons</enum>
+        </property>
+        <property name="suffix">
+         <string>bps</string>
+        </property>
+        <property name="minimum">
+         <number>6000</number>
+        </property>
+        <property name="maximum">
+         <number>128000</number>
+        </property>
+        <property name="value">
+         <number>6000</number>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_20">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>60</y>
+          <width>111</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Bandwidth</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_38">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>93</y>
+          <width>101</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Bit rate</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="checkBox_opus_vbr">
+        <property name="geometry">
+         <rect>
+          <x>280</x>
+          <y>30</y>
+          <width>161</width>
+          <height>19</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Enable variable bit rate encoding</string>
+        </property>
+        <property name="text">
+         <string>Variable bit rate</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_19">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>111</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Application</string>
+        </property>
+       </widget>
+       <widget class="QComboBox" name="comboBox_opus_bandwidth">
+        <property name="geometry">
+         <rect>
+          <x>140</x>
+          <y>60</y>
+          <width>111</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Audio input range</string>
+        </property>
+        <item>
+         <property name="text">
+          <string>Narrow</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Medium</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Wide</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Super Wide</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Full</string>
+         </property>
+        </item>
+       </widget>
+       <widget class="QComboBox" name="comboBox_opus_application">
+        <property name="geometry">
+         <rect>
+          <x>140</x>
+          <y>30</y>
+          <width>111</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Optimize for Voice or Audio</string>
+        </property>
+        <item>
+         <property name="text">
+          <string>VOIP</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Audio</string>
+         </property>
+        </item>
+       </widget>
+      </widget>
+      <widget class="QLabel" name="label_21">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>80</y>
+         <width>111</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Mode</string>
+       </property>
+      </widget>
+      <widget class="QComboBox" name="comboBox_dsca_mode">
+       <property name="geometry">
+        <rect>
+         <x>140</x>
+         <y>80</y>
+         <width>131</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="toolTip">
+        <string>DSCA modes</string>
+       </property>
+       <item>
+        <property name="text">
+         <string>mode0</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>mode1</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>mode2</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>mode3</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>mode4</string>
+        </property>
+       </item>
+      </widget>
+      <widget class="QLabel" name="label_39">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>113</y>
+         <width>111</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Excess</string>
+       </property>
+      </widget>
+      <widget class="QSpinBox" name="spinBox_oqpsk_excess">
+       <property name="geometry">
+        <rect>
+         <x>140</x>
+         <y>110</y>
+         <width>131</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="toolTip">
+        <string>OQPSK excess. Changes on air bandwidth. Smaller values result in less on air bandwidth but the receiver has a harder time to lock onto the signal.</string>
+       </property>
+       <property name="frame">
+        <bool>false</bool>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+       <property name="buttonSymbols">
+        <enum>QAbstractSpinBox::NoButtons</enum>
+       </property>
+       <property name="suffix">
+        <string>%</string>
+       </property>
+       <property name="minimum">
+        <number>5</number>
+       </property>
+       <property name="maximum">
+        <number>100</number>
+       </property>
+       <property name="value">
+        <number>50</number>
+       </property>
+      </widget>
+      <widget class="QSpinBox" name="spinBox_oqpsk_carrierfreq">
+       <property name="geometry">
+        <rect>
+         <x>140</x>
+         <y>140</y>
+         <width>131</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="toolTip">
+        <string>OQPSK carrier frequency</string>
+       </property>
+       <property name="frame">
+        <bool>false</bool>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+       <property name="buttonSymbols">
+        <enum>QAbstractSpinBox::NoButtons</enum>
+       </property>
+       <property name="suffix">
+        <string>Hz</string>
+       </property>
+       <property name="minimum">
+        <number>10000</number>
+       </property>
+       <property name="maximum">
+        <number>92000</number>
+       </property>
+       <property name="value">
+        <number>67500</number>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_40">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>143</y>
+         <width>111</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Carrier Freq</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_41">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>173</y>
+         <width>111</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Bit rate</string>
+       </property>
+      </widget>
+      <widget class="QSpinBox" name="spinBox_oqpsk_bitrate">
+       <property name="geometry">
+        <rect>
+         <x>300</x>
+         <y>170</y>
+         <width>131</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="toolTip">
+        <string>OQPSK bitrate. must be faster than the Opus bitrate after FEC is added</string>
+       </property>
+       <property name="frame">
+        <bool>false</bool>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+       <property name="buttonSymbols">
+        <enum>QAbstractSpinBox::NoButtons</enum>
+       </property>
+       <property name="suffix">
+        <string>bps</string>
+       </property>
+       <property name="minimum">
+        <number>10000</number>
+       </property>
+       <property name="maximum">
+        <number>94000</number>
+       </property>
+       <property name="value">
+        <number>67500</number>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_dsca_mode_description">
+       <property name="geometry">
+        <rect>
+         <x>120</x>
+         <y>20</y>
+         <width>171</width>
+         <height>51</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>First line&lt;br/&gt;Second line</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="checkBox_dsca_send_rds">
+       <property name="geometry">
+        <rect>
+         <x>310</x>
+         <y>80</y>
+         <width>131</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="toolTip">
+        <string>Use Digital SCA rather than analog SCA</string>
+       </property>
+       <property name="text">
+        <string>Send RDS data</string>
+       </property>
+      </widget>
+      <widget class="QComboBox" name="comboBox_oqpsk_bitrate_valid">
+       <property name="geometry">
+        <rect>
+         <x>140</x>
+         <y>170</y>
+         <width>131</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="toolTip">
+        <string>OQPSK bitrate. must be faster than the Opus bitrate after FEC is added</string>
+       </property>
+       <item>
+        <property name="text">
+         <string>10500 bps</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>19000 bps</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>24000 bps</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>32000 bps</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>42000 bps</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>50000 bps</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>56000 bps</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>72000 bps</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>82000 bps</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>94000 bps</string>
+        </property>
+       </item>
+      </widget>
+     </widget>
+     <widget class="QWidget" name="tab">
+      <attribute name="title">
+       <string>Developer</string>
+      </attribute>
+      <widget class="QLabel" name="label_noise">
+       <property name="geometry">
+        <rect>
+         <x>270</x>
+         <y>30</y>
+         <width>191</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>1.00 sigma</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_22">
+       <property name="geometry">
+        <rect>
+         <x>50</x>
+         <y>31</y>
+         <width>51</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Noise</string>
+       </property>
+      </widget>
+      <widget class="QSlider" name="horizontalSlider_noise">
+       <property name="geometry">
+        <rect>
+         <x>100</x>
+         <y>30</y>
+         <width>160</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="maximum">
+        <number>150</number>
+       </property>
+       <property name="value">
+        <number>70</number>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </widget>
     </widget>
    </item>
    <item>
@@ -1250,6 +1776,38 @@
     <hint type="destinationlabel">
      <x>286</x>
      <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spinBox_scacarrierfreq</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>spinBox_oqpsk_carrierfreq</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>368</x>
+     <y>272</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>218</x>
+     <y>185</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spinBox_oqpsk_carrierfreq</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>spinBox_scacarrierfreq</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>218</x>
+     <y>185</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>368</x>
+     <y>272</y>
     </hint>
    </hints>
   </connection>

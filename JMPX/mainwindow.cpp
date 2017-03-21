@@ -3,6 +3,9 @@
 
 #include <QSettings>
 #include <QDebug>
+#include <QStatusBar>
+
+using namespace std;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -37,7 +40,7 @@ MainWindow::MainWindow(QWidget *parent) :
     }
     if (library.load())
     {
-        qDebug() << "library loaded";
+        //qDebug() << "library loaded";
         createJMPXfunction createJMPX = (createJMPXfunction)library.resolve("createObject");
         pJMPX = createJMPX(this);
         if(pJMPX)
@@ -105,6 +108,8 @@ void MainWindow::updatedisplay()
     ui->lvolumemeter->setVolume(psigstats->lvol);
     ui->rvolumemeter->setVolume(psigstats->rvol);
     ui->outvolumemeter->setVolume(psigstats->outvol);
+    if(pJMPX->GetSCAopus()&&ui->groupBox_sca->isVisible())statusBar()->showMessage(((QString)"Opus buffer usage: %1%").arg(qRound(100.0*psigstats->opusbufferuseagepercent)),1000);
+
 }
 
 void MainWindow::on_action_Options_triggered()
@@ -174,6 +179,7 @@ void MainWindow::on_checkBox_modulate_stateChanged(int state)
     ui->lvolumemeter->setVolume(0);
     ui->rvolumemeter->setVolume(0);
     ui->outvolumemeter->setVolume(0);
+    statusBar()->clearMessage();
 
     if(state)songtitlecheck(nowplaying->rt_title);
 
@@ -183,8 +189,8 @@ void MainWindow::on_action_About_triggered()
 {
     QMessageBox::about(this,"JMPX",""
                                      "<H1>Stereo and RDS encoder for FM transmitters</H1>"
-                                     "<H3>v2.0.2</H3>"
-                                     "<p>When connected to an FM transmitter via a soundcard this program allows you to transmit in stereo along with the ability to send information using RDS (Radio Data System) to the listeners. With RDS the listeners can see what your station is called and other useful information. SCA allows another mono sub carrier to be added to the signal that can be received with a special receiver.</p>"
+                                     "<H3>v2.1.0</H3>"
+                                     "<p>When connected to an FM transmitter via a soundcard this program allows you to transmit in stereo along with the ability to send information using RDS (Radio Data System) to the listeners. With RDS the listeners can see what your station is called and other useful information. SCA allows another mono sub carrier to be added to the signal that can be received with a special receiver. DSCA is a digital version of SCA and also requires a special receiver.</p>"
                                      "<p>For more information about this application see <a href=\"http://jontio.zapto.org/hda1/paradise/jmpxencoder/jmpx.html\">http://jontio.zapto.org/hda1/paradise/jmpxencoder/jmpx.html</a>.</p>"
                                      "<p>Jonti 2017</p>" );
 }

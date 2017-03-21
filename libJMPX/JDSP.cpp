@@ -19,10 +19,10 @@ void  SymbolPointer::setFreq(double freqHZ,double samplerate)
 //----------------------
 
 
- WaveTable::WaveTable(TDspGen *_pDspGen) :
+ WaveTable::WaveTable(TDspGen *_pDspGen, double _Freq) :
         pDspGen(_pDspGen)
 {
-        RefreshSettings();
+        RefreshSettings(_Freq);
 }
 
 
@@ -32,11 +32,38 @@ WaveTable::~WaveTable()
  //
 }
 
-void  WaveTable::RefreshSettings()
+bool  WaveTable::IfPassesPointNextTime()
 {
-        WTstep=(pDspGen->Freq)*(WTSIZE)/((double)(pDspGen->SampleRate));
-        WTptr=0;
-        intWTptr=0;
+    FractionOfSampleItPassesBy=WTptr+(WTstep-WTSIZE);
+    if(FractionOfSampleItPassesBy<0)return false;
+    FractionOfSampleItPassesBy/=WTstep;
+    return true;
+}
+
+void  WaveTable::RefreshSettings(double _Freq)
+{
+    Freq=_Freq;
+    WTstep=(Freq)*(WTSIZE)/((double)(pDspGen->SampleRate));
+    WTptr=0;
+    intWTptr=0;
+}
+
+void  WaveTable::SetFreq(double _freq)
+{
+    Freq=_freq;
+    if(Freq<0)Freq=0;
+    WTstep=(Freq)*((double)WTSIZE)/((double)(pDspGen->SampleRate));
+}
+
+double WaveTable::GetFreqHz()
+{
+    return Freq;
+}
+
+void  WaveTable::IncreseFreqHz(double freq_hz)
+{
+    freq_hz+=Freq;
+    SetFreq(freq_hz);
 }
 
 void WaveTable::WTnextFrame()
@@ -49,7 +76,7 @@ void WaveTable::WTnextFrame()
 
 void WaveTable::WTnextFrame(double offset_in_hz)
 {
-    WTstep=(offset_in_hz+pDspGen->Freq)*(WTSIZE)/((double)(pDspGen->SampleRate));
+    WTstep=(offset_in_hz+Freq)*(WTSIZE)/((double)(pDspGen->SampleRate));
     WTnextFrame();
 }
 
@@ -65,6 +92,27 @@ double   WaveTable::WTSinValue()
     int i=intWTptr+1;i%=WTSIZE;
     double late=pDspGen->SinWT[i];
     double rem=WTptr-((double)intWTptr);
+    return (prompt*(1.0-rem)+late*rem);
+#endif
+}
+
+cpx_type WaveTable::WTCISValue()
+{
+#ifndef WT_Interpolate
+    int tintWTptr=intWTptr+WTSIZE/4;
+    return pDspGen->CISWT[tintWTptr];
+#endif
+
+#ifdef WT_Interpolate
+    //simple interpolation coule be used if wanted
+    double tWTptr=WTptr+((double)WTSIZE)/4.0;
+    while(!signbit(tWTptr-(double)WTSIZE))tWTptr-=(double)(WTSIZE);
+    if(signbit(tWTptr))tWTptr=0;
+    double tintWTptr=(int)tWTptr;
+    cpx_type prompt=pDspGen->CISWT[tintWTptr];
+    int i=tintWTptr+1;i%=WTSIZE;
+    cpx_type late=pDspGen->CISWT[i];
+    double rem=tWTptr-((double)tintWTptr);
     return (prompt*(1.0-rem)+late*rem);
 #endif
 }
@@ -183,10 +231,9 @@ std::vector<kffsamp_t> JFilterDesign::BandPassHanning(double LowFrequencyCutOff,
 
 //----------
 
-FMModulator::FMModulator(TSetGen *_pSetGen) :
-    pTDSPGen(new TDspGen(_pSetGen)),
-    pTDSPGenCarrier(new TDspGen(&ASetGen)),
-    pWaveTableCarrier(new WaveTable(pTDSPGenCarrier.get()))
+FMModulator::FMModulator(TDspGen *_pDspGen) :
+    pDspGen(_pDspGen),
+    pWaveTableCarrier(new WaveTable(pDspGen,67500.0))
 {
     fir = new JFastFIRFilter;
     outputbpf = new JFastFIRFilter;
@@ -212,24 +259,22 @@ double FMModulator::update(double &insignal)//say signal runs from -1 to 1
     insignal=signal;
 
     //fm modulate and clip the signal if needed
-    pWaveTableCarrier->WTnextFrame(clipper.Update(signal)*max_deviation);
+    pWaveTableCarrier->WTnextFrame(clipper.Update(signal)*settings.max_deviation);
 
     //return filtered modulated carrier signal
     return outputbpf->Update_Single(pWaveTableCarrier->WTSinValue());
 }
 
-void FMModulator::RefreshSettings(double carrier_freq, double max_audio_input_frequency, double _max_deviation, double _ouput_bandwidth)
+void FMModulator::RefreshSettings(double carrier_freq, double max_audio_input_frequency, double max_deviation, double _ouput_bandwidth)
 {
-    maxinfreq=max_audio_input_frequency;
+    settings.carrier_freq=carrier_freq;
+    settings.max_audio_input_frequency=max_audio_input_frequency;
+    settings.max_deviation=max_deviation;
+
     ouput_bandwidth=_ouput_bandwidth;
-    pTDSPGen->ResetSettings();
-    ASetGen.SampleRate=pTDSPGen->SampleRate;
-    ASetGen.Freq=carrier_freq;
-    max_deviation=_max_deviation;
-    pTDSPGenCarrier->ResetSettings();
-    pWaveTableCarrier->RefreshSettings();
-    fir->setKernel(JFilterDesign::LowPassHanning(max_audio_input_frequency,ASetGen.SampleRate,1024-1));//1001));
-    outputbpf->setKernel(JFilterDesign::BandPassHanning(ASetGen.Freq-ouput_bandwidth/2.0,ASetGen.Freq+ouput_bandwidth/2.0,ASetGen.SampleRate,1024-1));
+    pWaveTableCarrier->RefreshSettings(carrier_freq);
+    fir->setKernel(JFilterDesign::LowPassHanning(max_audio_input_frequency,pDspGen->SampleRate,1024-1));//1001));
+    outputbpf->setKernel(JFilterDesign::BandPassHanning(carrier_freq-ouput_bandwidth/2.0,carrier_freq+ouput_bandwidth/2.0,pDspGen->SampleRate,1024-1));
 }
 
 //----------
@@ -428,8 +473,13 @@ void FIRFilter::UpdateInterleavedOdd(double *data,int Size)
         pSetGen(_pSetGen)
 {
         SinWT.resize(WTSIZE);
+        CISWT.resize(WTSIZE);
         int i;
-        for(i=0;i<WTSIZE;i++){SinWT[i]=(sin(2.0*M_PI*((double)i)/((double)WTSIZE)));}
+        for(i=0;i<WTSIZE;i++)
+        {
+            SinWT[i]=(sin(2.0*M_PI*((double)i)/((double)WTSIZE)));
+            CISWT[i]=cpx_type(cos(2.0*M_PI*((double)i)/((double)WTSIZE)),sin(2.0*M_PI*((double)i)/((double)WTSIZE)));
+        }
         ResetSettings();
 }
 
@@ -442,7 +492,6 @@ void  TDspGen::ResetSettings()
 {
         //load values
         SampleRate=pSetGen->SampleRate;
-        Freq=pSetGen->Freq;
 }
 
 //---fast FIR
@@ -554,8 +603,10 @@ FastFIRFilterInterleavedStereo::~FastFIRFilterInterleavedStereo()
     delete right;
 }
 
-void FastFIRFilterInterleavedStereo::Update(kffsamp_t *data,int Size)
+//needs tidy up
+void FastFIRFilterInterleavedStereo::Update(kffsamp_t *data,int nFrames)
 {
+    int Size=2*nFrames;
     if((Size%2)!=0)return;//must be even
     if(leftbuf.size()*2!=(size_t)Size)//ensure storage
     {

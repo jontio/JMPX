@@ -4,12 +4,18 @@
 #include <QMessageBox>
 #include <QSettings>
 #include <QFileDialog>
+#include "../libopus-1.2-alpha/include/opus/opus_defines.h"
+
+#include <math.h>
+
 
 Options::Options(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Options)
 {
     ui->setupUi(this);
+
+    ui->spinBox_oqpsk_bitrate->setVisible(false);
 
     update_rt_music_title=true;
     quit_on_error=false;
@@ -148,6 +154,43 @@ void Options::savesettings(JMPXInterface *pJMPX,FileLoader *fileloader)
     settings.setValue("RDS_grp2Awantedbandwidthusage",pJMPX->RDS_Get_grp2Awantedbandwidthusage());
     settings.setValue("RDS_grp5Awantedbandwidthusage",pJMPX->RDS_Get_grp5Awantedbandwidthusage());
 
+//forth tab
+
+    //enable dsca (and opus)
+    settings.setValue("SCAopus_Enable",pJMPX->GetSCAopus());
+
+    //opus application
+    settings.setValue("OpusApplication",pJMPX->GetOpusApplication());
+
+    //opus max bandwidth
+    settings.setValue("OpusBandwidth",pJMPX->GetOpusBandwidth());
+
+    //opus bit rate
+    settings.setValue("OpusBitRate",pJMPX->GetOpusBitRate());
+
+    //opus vbr
+    settings.setValue("OpusVBR",pJMPX->GetOpusVRB());
+
+    //oqpsk excess
+    settings.setValue("OQPSKExcess",pJMPX->GetOQPSKExcess());
+
+    //oqpsk bit rate
+    settings.setValue("OQPSKBitrate",pJMPX->GetOQPSKBitrate());
+
+    //oqpsk carrier freq
+    settings.setValue("OQPSKCarrierFreq",pJMPX->GetOQPSKCarrierFreq());
+
+    //DSCAMode
+    settings.setValue("DSCAMode",pJMPX->GetDSCAMode());
+
+    //DSCASendRDS
+    settings.setValue("DSCASendRDS",pJMPX->GetDSCASendRDS());
+
+//fifth tab
+
+    //set noise level
+    settings.setValue("NoiseLevel",pJMPX->GetNoiseLevel());
+
 }
 
 void Options::loadsettings(JMPXInterface *pJMPX,FileLoader *fileloader)
@@ -268,6 +311,42 @@ void Options::loadsettings(JMPXInterface *pJMPX,FileLoader *fileloader)
     //group percentages
     pJMPX->RDS_Set_grouppercentages(settings.value("RDS_grp0Awantedbandwidthusage",0.8).toDouble(),settings.value("RDS_grp2Awantedbandwidthusage",0.2).toDouble(),settings.value("RDS_grp5Awantedbandwidthusage",0.0).toDouble());
 
+//forth tab
+
+    //enable dsca (and opus)
+    pJMPX->SetSCAopus(settings.value("SCAopus_Enable",false).toBool());
+
+    //opus application
+    pJMPX->SetOpusApplication(settings.value("OpusApplication",OPUS_APPLICATION_VOIP).toInt());
+
+    //opus max bandwidth
+    pJMPX->SetOpusBandwidth(settings.value("OpusBandwidth",OPUS_BANDWIDTH_NARROWBAND).toInt());
+
+    //opus bit rate
+    pJMPX->SetOpusBitRate(settings.value("OpusBitRate",6000).toInt());
+
+    //opus vbr
+    pJMPX->SetOpusVRB(settings.value("OpusVBR",true).toBool());
+
+    //oqpsk excess
+    pJMPX->SetOQPSKExcess(settings.value("OQPSKExcess",0.5).toDouble());
+
+    //oqpsk bit rate
+    pJMPX->SetOQPSKBitrate(settings.value("OQPSKBitrate",19000).toDouble());
+
+    //oqpsk carrier freq
+    pJMPX->SetOQPSKCarrierFreq(settings.value("OQPSKCarrierFreq",12000).toDouble());
+
+    //DSCAMode
+    pJMPX->SetDSCAMode(settings.value("DSCAMode",1).toInt());
+
+    //DSCASendRDS
+    pJMPX->SetDSCASendRDS(settings.value("DSCASendRDS",true).toBool());
+
+//fifth tab
+
+    //set noise level
+    pJMPX->SetNoiseLevel(settings.value("NoiseLevel",0.08).toDouble());
 
 }
 
@@ -481,6 +560,96 @@ void Options::populatesettings(JMPXInterface *pJMPX, FileLoader *fileloader)
     ui->spinBox_2A_percent->setValue(pJMPX->RDS_Get_grp2Awantedbandwidthusage()*100+0.5);
     ui->spinBox_5A_percent->setValue(pJMPX->RDS_Get_grp5Awantedbandwidthusage()*100+0.5);
 
+//forth tab
+
+    //enable dsca (and opus)
+    ui->checkBox_dsca_enable->setChecked(pJMPX->GetSCAopus());
+
+    //opus application
+    ui->comboBox_opus_application->setCurrentIndex(0);
+    switch(pJMPX->GetOpusApplication())
+    {
+    case OPUS_APPLICATION_VOIP:
+        {int index=ui->comboBox_opus_application->findText("VOIP");ui->comboBox_opus_application->setCurrentIndex(index);}
+        break;
+    case OPUS_APPLICATION_AUDIO:
+        {int index=ui->comboBox_opus_application->findText("Audio");ui->comboBox_opus_application->setCurrentIndex(index);}
+        break;
+    }
+
+    //opus max bandwidth
+    ui->comboBox_opus_bandwidth->setCurrentIndex(0);
+    switch(pJMPX->GetOpusBandwidth())
+    {
+    case OPUS_BANDWIDTH_NARROWBAND:
+        {int index=ui->comboBox_opus_bandwidth->findText("Narrow");ui->comboBox_opus_bandwidth->setCurrentIndex(index);}
+        break;
+    case OPUS_BANDWIDTH_MEDIUMBAND:
+        {int index=ui->comboBox_opus_bandwidth->findText("Medium");ui->comboBox_opus_bandwidth->setCurrentIndex(index);}
+        break;
+    case OPUS_BANDWIDTH_WIDEBAND:
+        {int index=ui->comboBox_opus_bandwidth->findText("Wide");ui->comboBox_opus_bandwidth->setCurrentIndex(index);}
+        break;
+    case OPUS_BANDWIDTH_SUPERWIDEBAND:
+        {int index=ui->comboBox_opus_bandwidth->findText("Super Wide");ui->comboBox_opus_bandwidth->setCurrentIndex(index);}
+        break;
+    case OPUS_BANDWIDTH_FULLBAND:
+        {int index=ui->comboBox_opus_bandwidth->findText("Full");ui->comboBox_opus_bandwidth->setCurrentIndex(index);}
+        break;
+    }
+
+    //opus bit rate
+    ui->spinBox_opus_bitrate->setValue(pJMPX->GetOpusBitRate());
+
+    //opus vbr
+    ui->checkBox_opus_vbr->setChecked(pJMPX->GetOpusVRB());
+
+    //oqpsk excess
+    ui->spinBox_oqpsk_excess->setValue(pJMPX->GetOQPSKExcess()*100.0);
+
+    //oqpsk bit rate
+    //ui->spinBox_oqpsk_bitrate->setValue(pJMPX->GetOQPSKBitrate());
+    ui->comboBox_oqpsk_bitrate_valid->setCurrentIndex(0);
+    {int index=ui->comboBox_oqpsk_bitrate_valid->findText(QString::number(pJMPX->GetOQPSKBitrate())+" bps");ui->comboBox_oqpsk_bitrate_valid->setCurrentIndex(index);}
+
+
+    //oqpsk carrier freq
+    ui->spinBox_oqpsk_carrierfreq->setValue(pJMPX->GetOQPSKCarrierFreq());
+
+    //DSCAMode
+    ui->comboBox_dsca_mode->setCurrentIndex(pJMPX->GetDSCAMode());
+    updateDSCADescription(pJMPX->GetDSCAMode());
+
+    //DSCASendRDS
+    ui->checkBox_dsca_send_rds->setChecked(pJMPX->GetDSCASendRDS());
+
+//fifth tab
+
+    //set noise level
+    ui->horizontalSlider_noise->setValue(qRound(pJMPX->GetNoiseLevel()*1000.0));
+
+}
+
+void Options::updateDSCADescription(int mode)
+{
+    switch(mode)
+    {
+    case 0:
+        ui->label_dsca_mode_description->setText("No FEC<br>9680 bit frame");
+        break;
+    case 1:
+        ui->label_dsca_mode_description->setText("25% FEC<br>9680 bit frame");
+        break;
+    case 2:
+        ui->label_dsca_mode_description->setText("25% FEC<br>19280 bit frame");
+        break;
+    case 3:
+        ui->label_dsca_mode_description->setText("50% FEC<br>9680 bit frame");
+        break;
+    case 4:
+        ui->label_dsca_mode_description->setText("50% FEC<br>19280 bit frame");
+        break;
+    }
 }
 
 void Options::pushsetting(JMPXInterface *pJMPX,FileLoader *fileloader)
@@ -629,6 +798,49 @@ void Options::pushsetting(JMPXInterface *pJMPX,FileLoader *fileloader)
     //group percentages
     pJMPX->RDS_Set_grouppercentages(ui->spinBox_0A_percent->value(),ui->spinBox_2A_percent->value(),ui->spinBox_5A_percent->value());
 
+//forth tab
+
+    //enable dsca (and opus)
+    pJMPX->SetSCAopus(ui->checkBox_dsca_enable->isChecked());
+
+    //opus application
+    if(ui->comboBox_opus_application->currentText()=="VOIP")pJMPX->SetOpusApplication(OPUS_APPLICATION_VOIP);
+    if(ui->comboBox_opus_application->currentText()=="Audio")pJMPX->SetOpusApplication(OPUS_APPLICATION_AUDIO);
+
+    //opus max bandwidth
+    if(ui->comboBox_opus_bandwidth->currentText()=="Narrow")pJMPX->SetOpusBandwidth(OPUS_BANDWIDTH_NARROWBAND);
+    if(ui->comboBox_opus_bandwidth->currentText()=="Medium")pJMPX->SetOpusBandwidth(OPUS_BANDWIDTH_MEDIUMBAND);
+    if(ui->comboBox_opus_bandwidth->currentText()=="Wide")pJMPX->SetOpusBandwidth(OPUS_BANDWIDTH_WIDEBAND);
+    if(ui->comboBox_opus_bandwidth->currentText()=="Super Wide")pJMPX->SetOpusBandwidth(OPUS_BANDWIDTH_SUPERWIDEBAND);
+    if(ui->comboBox_opus_bandwidth->currentText()=="Full")pJMPX->SetOpusBandwidth(OPUS_BANDWIDTH_FULLBAND);
+
+    //opus bit rate
+    pJMPX->SetOpusBitRate(ui->spinBox_opus_bitrate->value());
+
+    //opus vbr
+    pJMPX->SetOpusVRB(ui->checkBox_opus_vbr->isChecked());
+
+    //oqpsk excess
+    pJMPX->SetOQPSKExcess(((double)ui->spinBox_oqpsk_excess->value())/100.0);
+
+    //oqpsk bit rate
+    pJMPX->SetOQPSKBitrate(ui->spinBox_oqpsk_bitrate->value());
+    pJMPX->SetOQPSKBitrate(ui->comboBox_oqpsk_bitrate_valid->currentText().remove("bps").toDouble());
+
+    //oqpsk carrier freq
+    pJMPX->SetOQPSKCarrierFreq(ui->spinBox_oqpsk_carrierfreq->value());
+
+    //DSCAMode
+    pJMPX->SetDSCAMode(ui->comboBox_dsca_mode->currentIndex());
+
+    //DSCASendRDS
+    pJMPX->SetDSCASendRDS(ui->checkBox_dsca_send_rds->isChecked());
+
+//fifth tab
+
+    //set noise level
+    pJMPX->SetNoiseLevel(((double)ui->horizontalSlider_noise->value())/1000.0);
+
 }
 
 void Options::on_checkBox_rbds_clicked(bool checked)
@@ -737,6 +949,27 @@ void Options::on_horizontalSlider_rdslevel_valueChanged(int value)
 void Options::on_horizontalSlider_scalevel_valueChanged(int value)
 {
     ui->label_scalevel->setText(((QString)"%1%").arg(((double)value)/10.0,0,'f',1,'0'));
+
+    double noiselevel=((double)ui->horizontalSlider_noise->value())/1000.0;
+    double SCA_Level=((double)ui->horizontalSlider_scalevel->value())/1000.0;
+    double eb=SCA_Level*SCA_Level/41283.07807;
+    double no=(noiselevel*noiselevel)/192000.0;
+    double ebno=10.0*std::log10(eb/no);
+    ui->label_noise->setText(((QString)"EbNo %1 dB OQPSK").arg(ebno,0,'f',1,'0'));
+}
+
+
+void Options::on_horizontalSlider_noise_valueChanged(int value)
+{
+Q_UNUSED(value);
+    //ui->label_noise->setText(((QString)"%1 sigma").arg(((double)value)/1000.0,0,'f',3,'0'));
+
+    double noiselevel=((double)ui->horizontalSlider_noise->value())/1000.0;
+    double SCA_Level=((double)ui->horizontalSlider_scalevel->value())/1000.0;
+    double eb=SCA_Level*SCA_Level/41283.07807;
+    double no=(noiselevel*noiselevel)/192000.0;
+    double ebno=10.0*std::log10(eb/no);
+    ui->label_noise->setText(((QString)"EbNo %1 dB OQPSK").arg(ebno,0,'f',1,'0'));
 }
 
 void Options::on_toolButton_5a_filename_clicked()
@@ -819,3 +1052,10 @@ void Options::on_spinBox_5A_percent_valueChanged(int arg1)
         ui->groupBox_5a->setChecked(false);
     } else ui->groupBox_5a->setChecked(true);
 }
+
+void Options::on_comboBox_dsca_mode_currentIndexChanged(int index)
+{
+    updateDSCADescription(index);
+}
+
+

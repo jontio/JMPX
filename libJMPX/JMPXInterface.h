@@ -71,6 +71,10 @@ public:
     virtual void SetSCACarrierFrequency(double value)=0;
     virtual double GetSCACarrierFrequency()=0;
 
+    //--developer
+    virtual void SetNoiseLevel(double value)=0;
+    virtual double GetNoiseLevel()=0;
+
     //--RDS interface
 
     virtual void SetEnableRDS(bool enable)=0;
@@ -134,6 +138,35 @@ public:
 
 
     //--RDS interface end
+
+
+    //--opus interface start
+    virtual void SetSCAopus(bool enable)=0;
+    virtual bool GetSCAopus()=0;
+    virtual void SetOpusBitRate(int bitrate)=0;
+    virtual int  GetOpusBitRate()=0;
+    virtual void SetOpusApplication(int application)=0;
+    virtual int GetOpusApplication()=0;
+    virtual void SetOpusVRB(bool enable)=0;
+    virtual bool GetOpusVRB()=0;
+    virtual void SetOpusBandwidth(int bandwidth)=0;
+    virtual int GetOpusBandwidth()=0;
+    //--opus interface end
+
+    //oqpsk interface start
+    virtual void SetOQPSKExcess(double excess)=0;
+    virtual double GetOQPSKExcess()=0;
+    virtual void SetOQPSKBitrate(double bitrate)=0;
+    virtual double GetOQPSKBitrate()=0;
+    virtual void SetOQPSKCarrierFreq(double carrier_freq)=0;
+    virtual double GetOQPSKCarrierFreq()=0;
+    //oqpsk interface end
+
+    //dsca interfate start
+    virtual void SetDSCAMode(int mode)=0;
+    virtual int GetDSCAMode()=0;
+    virtual void SetDSCASendRDS(bool enable)=0;
+    virtual bool GetDSCASendRDS()=0;
 
 signals:
 

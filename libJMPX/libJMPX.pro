@@ -4,6 +4,8 @@
 #
 #-------------------------------------------------
 
+#this file always seems to need a few tweaks to get it working right on all platforms. you might have to do a little.
+
 QT       -= gui
 
 TARGET = libJMPX
@@ -19,6 +21,23 @@ DEFINES += JMPX_LIBRARY \
 #remove warnings about std::auto_ptr being deprescated. what should we replace them with. TODO
 QMAKE_CXXFLAGS += -Wno-deprecated
 
+
+#libopus is here.
+INCLUDEPATH +=../libopus-1.2-alpha/include
+win32 {
+contains(QT_ARCH, i386) {
+    #message("32-bit")
+    LIBS += -L$$PWD/../libopus-1.2-alpha/lib/32
+} else {
+    #message("64-bit")
+    LIBS += -L$$PWD/../libopus-1.2-alpha/lib/64
+}
+}
+
+#libopus library
+LIBS += -llibopus
+
+#here we have rtaudio
 #You dont need all these audio APIs.
 #Say if you want only jack then remove __LINUX_PULSE__ and __LINUX_ALSA__ leaving just DEFINES += __UNIX_JACK__
 #I have never compiled on mac so if you have let me know if anything should be changed
@@ -43,7 +62,10 @@ SOURCES += libJMPX.cpp \
     ../kiss_fft130/tools/kiss_fastfir.c \
     ../kiss_fft130/kiss_fft.c \
     ../kiss_fft130/tools/kiss_fftr.c \
-    rds.cpp
+    rds.cpp \
+    oqpskmodulator.cpp \
+    dataformatter.cpp \
+    ../viterbi-xukmin/viterbi.cpp
 
 HEADERS += libJMPX.h \
     Definitions.h \
@@ -55,7 +77,11 @@ HEADERS += libJMPX.h \
     ../kiss_fft130/tools/kiss_fastfir.h \
     ../kiss_fft130/_kiss_fft_guts.h \
     ../kiss_fft130/kiss_fft.h \
-    rds.h
+    rds.h \
+    oqpskmodulator.h \
+    dataformatter.h \
+    ../viterbi-xukmin/viterbi.h \
+    ../libopus-1.2-alpha/include/opus/opus.h
 
 
 contains(DEFINES, __WINDOWS_DS__) {
@@ -94,4 +120,6 @@ DISTFILES += \
     ../kiss_fft130/TIPS \
     ../kiss_fft130/CHANGELOG \
     ../kiss_fft130/COPYING \
-    ../rtaudio-4.1.2/readme
+    ../rtaudio-4.1.2/readme \
+    ../viterbi-xukmin/LICENSE.md \
+    ../viterbi-xukmin/README.md

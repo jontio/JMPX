@@ -11,8 +11,11 @@
 #include <vector>
 #include <string>
 #include <valarray>
+#include <complex>
 
 #include <QDebug>
+
+typedef std::complex<double> cpx_type;
 
 #if defined(__linux__)
 #include <sys/time.h>
@@ -56,8 +59,8 @@ public:
          ~TDspGen();
 
         vector<double> SinWT;
+        vector<cpx_type> CISWT;
 
-        double Freq;
         int SampleRate;
 };
 
@@ -95,20 +98,29 @@ private:
 class WaveTable
 {
 public:
-        WaveTable(TDspGen *_pDspGen);
+        WaveTable(TDspGen *_pDspGen,double Freq);
 
         ~WaveTable();
+        double FractionOfSampleItPassesBy;
+        bool  IfPassesPointNextTime();
         void WTnextFrame();
         double   WTSinValue();
+        cpx_type WTCISValue();
         double   WTSin2Value();
         double   WTSin3Value();
-        void  RefreshSettings();
+        void  RefreshSettings(double Freq);
         void WTnextFrame(double offset_in_hz);
+
+        void  SetFreq(double _freq);
+        double GetFreqHz();
+        void  IncreseFreqHz(double freq_hz);
+
 private:
         double WTstep;
         int intWTptr;
         double WTptr;
         TDspGen *pDspGen;
+        double Freq;
 };
 
 //-------------------
@@ -214,7 +226,7 @@ class FastFIRFilterInterleavedStereo
 public:
     FastFIRFilterInterleavedStereo(std::vector<kffsamp_t> &imp_responce,size_t &nfft);
     ~FastFIRFilterInterleavedStereo();
-    void Update(kffsamp_t *data,int Size);
+    void Update(kffsamp_t *data, int nFrames);
     void reset()
     {
         left->reset();
@@ -242,7 +254,7 @@ public:
     {
         delete fir;
     }
-    void Update(kffsamp_t *data,int Size){fir->Update(data,Size);}
+    void Update(kffsamp_t *data,int nFrames){fir->Update(data,nFrames);}
     void reset(){fir->reset();}
 private:
     FastFIRFilterInterleavedStereo *fir;
@@ -297,9 +309,16 @@ private:
 class FMModulator
 {
 public:
-    FMModulator(TSetGen *_pSetGen);
+    struct Settings //ouput_bandwidth is filled in by carsons rule. I dont really want to change that
+    {
+        double carrier_freq;double max_audio_input_frequency;double max_deviation;
+        Settings(){carrier_freq=67500;max_audio_input_frequency=7000;max_deviation=3500;}
+    };
+    FMModulator(TDspGen *_pDspGen);
     ~FMModulator();
     double update(double &insignal);
+    void RefreshSettings(){RefreshSettings(settings);}
+    void RefreshSettings(FMModulator::Settings settings){RefreshSettings(settings.carrier_freq,settings.max_audio_input_frequency,settings.max_deviation);}
     void RefreshSettings(double carrier_freq, double max_audio_input_frequency, double max_deviation, double ouput_bandwidth);
     void RefreshSettings(double carrier_freq, double max_audio_input_frequency, double max_deviation)
     {
@@ -307,23 +326,20 @@ public:
         //sets output bandwith using carson's rule
          RefreshSettings(carrier_freq,max_audio_input_frequency,max_deviation, 2.0*(max_audio_input_frequency+max_deviation));
     }
-    void SetTc(TimeConstant timeconst){preemp.SetTc(timeconst);}
+    FMModulator::Settings getSettings(){return settings;}
+    void SetTc(TimeConstant timeconst){preemp.SetTc(timeconst);}//for some reason preemp is not considered a setting
     TimeConstant GetTc(){return preemp.GetTc();}
 private:
-    double max_deviation;
-    double ouput_bandwidth;
-    TSetGen ASetGen;
-    std::auto_ptr< TDspGen > pTDSPGen;
-    std::auto_ptr< TDspGen > pTDSPGenCarrier;
+
+    TDspGen *pDspGen;
     std::auto_ptr< WaveTable > pWaveTableCarrier;
     JFastFIRFilter *fir;
 
-    double maxinfreq;
+    FMModulator::Settings settings;
+    double ouput_bandwidth;
 
     Clipper clipper;
-
     PreEmphasis preemp;
-
     JFastFIRFilter *outputbpf;
 };
 

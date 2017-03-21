@@ -36,7 +36,8 @@ HEADERS += \
     vol/volumemeter.h \
     ../libJMPX/JMPXInterface.h \
     options.h \
-    fileloader.h
+    fileloader.h \
+    ../libopus-1.2-alpha/include/opus/opus_defines.h
 
 SOURCES += \
     main.cpp \
