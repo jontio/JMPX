@@ -7,14 +7,15 @@ OQPSKModulator::OQPSKModulator(TDspGen *_pDspGen, QObject *parent) :
     pWaveTableCarrier(new WaveTable(pDspGen,1000)),
     pWaveTableSymbol(new WaveTable(pDspGen,200))
 {
-    spooling=false;
+    spooling=false;    
+    dscabpf = new JFastFIRFilter;
     //set default settings
     RefreshSettings(2400,3000,0.75,40000);//2400bps at 3khz carrier and 0.75 excess. 40000 bits of buffer storage
 }
 
 OQPSKModulator::~OQPSKModulator()
 {
-
+    delete dscabpf;
 }
 
 bool OQPSKModulator::LoadBits(const QVector<int> &bits)
@@ -121,7 +122,8 @@ double OQPSKModulator::update()
     cpx_type signal=cpx_type(carrier.real()*fir_re.Update_Single(symbol.real()),carrier.imag()*fir_im.Update_Single(symbol.imag()));
 
     //return the two arms
-    return 0.5*(signal.real()+signal.imag());
+    //return (0.5*(signal.real()+signal.imag()));
+    return dscabpf->Update_Single(0.5*(signal.real()+signal.imag()));
 }
 
 void OQPSKModulator::RefreshSettings(double bitrate,double carrier_freq,double alpha, int max_bit_buffer_size)
@@ -154,6 +156,11 @@ void OQPSKModulator::RefreshSettings(double bitrate,double carrier_freq,double a
     rrc.scalepoints(6.1);
     fir_re.setKernel(rrc.Points);
     fir_im.setKernel(rrc.Points);
+
+    double bw=0.5*(1.0+alpha)*bitrate+10;
+    double minfreq=qMax(carrier_freq-bw/2.0,1.0);
+    double maxfreq=qMin(carrier_freq+bw/2.0,((double)(pDspGen->SampleRate))/2.0-1.0);
+    dscabpf->setKernel(JFilterDesign::BandPassHanning(minfreq,maxfreq,pDspGen->SampleRate,256-1));
 
     symbol_this=0;
     symbol_next=0;

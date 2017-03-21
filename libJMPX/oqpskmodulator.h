@@ -48,6 +48,8 @@ private:
 
     bool spooling;
 
+    JFastFIRFilter *dscabpf;
+
 signals:
     void CallForMoreData(int buffer_free);
 public slots:
