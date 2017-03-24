@@ -39,7 +39,8 @@ public:
             if(crc_bit ^ bits[i])crc = crc ^ 0x8408;//(0x8408 is reversed 0x1021)add to the crc the poly mod2 if crc_bit + block_bit = 1 mod2 (0x1021 is the ploy with the first bit missing so this means x^16+x^12+x^5+1)
 
         }
-        return ~crc;
+        crc=~crc;
+        return crc;
     }
     quint16 calcusingbytes(char *bytes,int numberofbytes)
     {
@@ -68,7 +69,35 @@ public:
 
             }
         }
-        return ~crc;
+        crc=~crc;
+        return crc;
+    }
+    quint16 calcusingbytes_update(uchar message_byte)
+    {
+        crc = ~crc;
+        int crc_bit;
+        int message_bit;
+
+        for(int k=0;k<8;k++)
+        {
+
+            //message_bit=(message_byte>>7)&1;
+            //message_byte<<=1;
+            //crc_bit = (crc >> 15) & 1;//bit of crc we are working on. 15=poly order-1
+            //crc <<= 1;//shift to next crc bit (have to do this here before Gate A does its thing)
+            //if(crc_bit ^ message_bit)crc = crc ^ 0x1021;//add to the crc the poly mod2 if crc_bit + block_bit = 1 mod2 (0x1021 is the ploy with the first bit missing so this means x^16+x^12+x^5+1)
+
+            //differnt endiness
+            message_bit=message_byte&1;
+            message_byte>>=1;
+            crc_bit = crc & 1;//bit of crc we are working on. 15=poly order-1
+            crc >>= 1;//shift to next crc bit (have to do this here before Gate A does its thing)
+            if(crc_bit ^ message_bit)crc = crc ^ 0x8408;//(0x8408 is reversed 0x1021)add to the crc the poly mod2 if crc_bit + block_bit = 1 mod2 (0x1021 is the ploy with the first bit missing so this means x^16+x^12+x^5+1)
+
+        }
+
+        crc=~crc;
+        return crc;
     }
     quint16 calcusingbytesotherendines(char *bytes,int numberofbytes)
     {
@@ -97,7 +126,8 @@ public:
 
             }
         }
-        return ~crc;
+        crc=~crc;
+        return crc;
     }
     quint16 calcusingbytes(QByteArray data)
     {
@@ -142,6 +172,7 @@ private:
 
 
     CRC16 crc16;
+
 };
 
 

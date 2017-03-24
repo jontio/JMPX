@@ -83,19 +83,68 @@ bool TSlip::GotRXPacket(const QByteArray &data)
         {
             escapeing=false;
             rxi++;
-            if(RxPacket.count()>3)
+            if(RxPacket.count()>1)
             {
-                crc16.calcusingbytes(RxPacket.data(),RxPacket.size()-3);
-                crc16_rec=(((((quint16)(RxPacket.at(RxPacket.count()-2)))<<8)&0xFF00)|(((quint16)(RxPacket.at(RxPacket.count()-1)))&0x00FF));
+
+                uchar type=0;
+                uchar hibyte=0;
+                uchar lowbyte=0;
+                int pkt_size=0;
+
+                if(RxPacket.count()>3)type=   (((uchar)(RxPacket.at(RxPacket.count()-3))));
+                if(RxPacket.count()>2)hibyte= (((uchar)(RxPacket.at(RxPacket.count()-2))));
+                if(RxPacket.count()>1)lowbyte=(((uchar)(RxPacket.at(RxPacket.count()-1))));
+
+                //deal with short hedders
+                if(!(lowbyte&0x80))
+                {
+                    if(RxPacket.count()>3)
+                    {
+                        pkt_size=RxPacket.size()-3;
+                        crc16.calcusingbytes(RxPacket.data(),RxPacket.size()-2);
+                        crc16_rec=((((quint16)hibyte)<<8)&0xFF00)|(((quint16)lowbyte)&0x00FF);
+                        crc16_rec|=0x0080;
+                        crc16.crc|=0x0080;
+                        if(crc16.crc==crc16_rec)
+                        {
+                            //qDebug()<<"type="<<type;
+                        }
+                    } else {pkt_size=0;crc16_rec=0;crc16.crc=1;}
+                }
+                 else
+                 {
+                    pkt_size=RxPacket.size()-1;
+                    crc16_rec=(((quint16)lowbyte)&0x00FF);
+                    quint16 crcbackup=crc16.calcusingbytes(RxPacket.data(),RxPacket.size()-1);
+
+                    //search types from 1 to 16 inclusive as these ones are allowed to have the 8 byte header
+                    for(int k=1;k<=16;k++)
+                    {
+                        crc16.crc=crcbackup;
+                        crc16.calcusingbytes_update(k);
+                        crc16_rec&=0x007F;
+                        crc16.crc&=0x007F;
+                        if(crc16.crc==crc16_rec)
+                        {
+                            //qDebug()<<k;
+                            type=k;
+                            break;
+                        }
+                    }
+
+                 }
+
+                //here it appears we have a normal header
                 if(crc16.crc==crc16_rec)
                 {
                     goodBytes_cnt+=RxPacket.size();
-                    RxPacket_type=RxPacket.at(RxPacket.count()-3);
-                    RxPacket.resize(RxPacket.size()-3);
+                    RxPacket_type=type;
+                    RxPacket.resize(pkt_size);
                     LastGotRXPacketWasTrue=true;
                     //RxPacket.push_back(char(0));
                     return true;
                 } else badBytes_cnt+=RxPacket.size();
+
             }
             RxPacket.resize(0);
             continue;
@@ -152,10 +201,21 @@ bool TSlip::GotRXPacket(const QByteArray &data)
 QByteArray &TSlip::EscapePacket(uchar packet_type,const QByteArray &data)
 {
 
+    //calc crc. include type. the 8th bit of the 16 bit crc is the compression flag
     uchar hibyte,lowbyte;
     crc16.calcusingbytes(data);
+    crc16.calcusingbytes_update(packet_type);
     hibyte=(uchar)((crc16.crc&0xFF00)>>8);
-    lowbyte=(uchar)(crc16.crc&0x00FF);
+    lowbyte=(uchar)(crc16.crc&0x007F);
+
+    //decide whether or not to use short headder
+    //packet types 1 to 16 inclusive are allowed to use this headder type
+    bool shortning=true;
+    if(packet_type>16||packet_type==0)
+    {
+        shortning=false;
+
+    } else lowbyte|=0x0080;//flag as short
 
     tmppkt.reserve(data.size()+50);
     tmppkt.resize(0);
@@ -168,44 +228,50 @@ QByteArray &TSlip::EscapePacket(uchar packet_type,const QByteArray &data)
         switch((uchar)(data.at(i)))
         {
         case END:
-                tmppkt.push_back(ESC);
-                tmppkt.push_back(ESC_END);
-                break;
+            tmppkt.push_back(ESC);
+            tmppkt.push_back(ESC_END);
+            break;
         case ESC:
-                tmppkt.push_back(ESC);
-                tmppkt.push_back(ESC_ESC);
-                break;
+            tmppkt.push_back(ESC);
+            tmppkt.push_back(ESC_ESC);
+            break;
         default:
-                tmppkt.push_back((uchar)data.at(i));
+            tmppkt.push_back((uchar)data.at(i));
         }
     }
 
-    switch(packet_type)
+    //if the packet is normal
+    if(!shortning)
     {
-    case END:
-            tmppkt.push_back(ESC);
-            tmppkt.push_back(ESC_END);
-            break;
-    case ESC:
-            tmppkt.push_back(ESC);
-            tmppkt.push_back(ESC_ESC);
-            break;
-    default:
-            tmppkt.push_back(packet_type);
-    }
 
-    switch(hibyte)
-    {
-    case END:
+        switch(packet_type)
+        {
+        case END:
             tmppkt.push_back(ESC);
             tmppkt.push_back(ESC_END);
             break;
-    case ESC:
+        case ESC:
             tmppkt.push_back(ESC);
             tmppkt.push_back(ESC_ESC);
             break;
-    default:
+        default:
+            tmppkt.push_back(packet_type);
+        }
+
+        switch(hibyte)
+        {
+        case END:
+            tmppkt.push_back(ESC);
+            tmppkt.push_back(ESC_END);
+            break;
+        case ESC:
+            tmppkt.push_back(ESC);
+            tmppkt.push_back(ESC_ESC);
+            break;
+        default:
             tmppkt.push_back(hibyte);
+        }
+
     }
 
     switch(lowbyte)
