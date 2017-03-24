@@ -6,6 +6,8 @@
 #include "../libJMPX/JMPXInterface.h"
 #include "fileloader.h"
 
+//#define DEV_TAB
+
 namespace Ui {
 class Options;
 }

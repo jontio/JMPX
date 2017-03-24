@@ -1681,7 +1681,7 @@
        </item>
       </widget>
      </widget>
-     <widget class="QWidget" name="tab">
+     <widget class="QWidget" name="tab_dev">
       <attribute name="title">
        <string>Developer</string>
       </attribute>
@@ -1724,7 +1724,7 @@
         <number>150</number>
        </property>
        <property name="value">
-        <number>70</number>
+        <number>0</number>
        </property>
        <property name="orientation">
         <enum>Qt::Horizontal</enum>

@@ -17,6 +17,11 @@ Options::Options(QWidget *parent) :
 
     ui->spinBox_oqpsk_bitrate->setVisible(false);
 
+#ifndef DEV_TAB
+    ui->tabWidget->removeTab(ui->tabWidget->indexOf(ui->tab_dev));
+    ui->tab_dev->setParent(this);
+#endif
+
     update_rt_music_title=true;
     quit_on_error=false;
 
@@ -187,9 +192,10 @@ void Options::savesettings(JMPXInterface *pJMPX,FileLoader *fileloader)
     settings.setValue("DSCASendRDS",pJMPX->GetDSCASendRDS());
 
 //fifth tab
-
+#ifdef DEV_TAB
     //set noise level
     settings.setValue("NoiseLevel",pJMPX->GetNoiseLevel());
+#endif
 
 }
 
@@ -344,9 +350,10 @@ void Options::loadsettings(JMPXInterface *pJMPX,FileLoader *fileloader)
     pJMPX->SetDSCASendRDS(settings.value("DSCASendRDS",true).toBool());
 
 //fifth tab
-
+#ifdef DEV_TAB
     //set noise level
     pJMPX->SetNoiseLevel(settings.value("NoiseLevel",0.08).toDouble());
+#endif
 
 }
 
@@ -624,9 +631,10 @@ void Options::populatesettings(JMPXInterface *pJMPX, FileLoader *fileloader)
     ui->checkBox_dsca_send_rds->setChecked(pJMPX->GetDSCASendRDS());
 
 //fifth tab
-
+#ifdef DEV_TAB
     //set noise level
     ui->horizontalSlider_noise->setValue(qRound(pJMPX->GetNoiseLevel()*1000.0));
+#endif
 
 }
 
@@ -837,9 +845,12 @@ void Options::pushsetting(JMPXInterface *pJMPX,FileLoader *fileloader)
     pJMPX->SetDSCASendRDS(ui->checkBox_dsca_send_rds->isChecked());
 
 //fifth tab
-
+#ifdef DEV_TAB
     //set noise level
     pJMPX->SetNoiseLevel(((double)ui->horizontalSlider_noise->value())/1000.0);
+#else
+    pJMPX->SetNoiseLevel(-1);
+#endif
 
 }
 
