@@ -1,4 +1,4 @@
-#JMPX v2
+# JMPX v2
 A Stereo encoder for FM transmitters now with RDS and SCA support.
 
 ![Screenshot of JMPX on Linux](JMPX/images/screenshot-linux.png)
@@ -11,7 +11,7 @@ This program consists of a dynamically liked library and a GUI. The library perf
 
 Thanks to Radio Galileo (Galileo Soc. Coop.) 100.5Mhz in Terni Italy and Federico Allegretti for their funding to the development of RDS support for JMPX.
 
-##Compiling
+## Compiling
 
 Qt and Qt Creator are recommended.
 
@@ -20,11 +20,17 @@ Qt and Qt Creator are recommended.
 * Copy libJMPX.dll (or something like liblibJMPX.so.0.1 on Linux) from the build directory when building libJMPX to the build directory when building JMPX
 * Run JMPX.exe (or JMPX on Linux)
 
-##FM Transmitter
+## FM Transmitter
 
 The transmitter needs to not have any low pass filter on its input from the soundcard. This is so the frequencies above 16kHz actually modulate the transmitter.
 
 For testing it is possible to use a simple one transistor FM transmitter design but signal quality and frequency stability are likely to be problems.
 
+## SCA and DSCA
+
+SCA is for transmitting another audio signal on top of the standard FM signal and is usually transmitted way up around 67.5K. DSCA is a digital equivalent to SCA and can be demodulated and decoded with [JDSCA].
+
 Jonti 2017
 http://jontio.zapto.org
+
+[JDSCA]: https://github.com/jontio/JDSCA
