@@ -1,5 +1,5 @@
 # JMPX v2
-A Stereo encoder for FM transmitters now with RDS and SCA support.
+A Stereo encoder for FM transmitters now with RDS, SCA and DSCA support.
 
 ![Screenshot of JMPX on Linux](JMPX/images/screenshot-linux.png)
 
