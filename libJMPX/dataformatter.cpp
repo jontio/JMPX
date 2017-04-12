@@ -499,25 +499,25 @@ QVector<int> &DataFormatter::createFrame(QByteArray &frame_msg)
 
     //add preamble and header
     frame.resize(0);
-    frame.append(preamble);//64 bits
+    frame<<preamble;//64 bits
 
     //append mode type ransmission
     switch(mode)
     {
     case DataFormatter::mode0:
-        frame.append(modecodesbits[0]);
+        frame<<modecodesbits[0];
         break;
     case DataFormatter::mode1:
-        frame.append(modecodesbits[1]);
+        frame<<modecodesbits[1];
         break;
     case DataFormatter::mode2:
-        frame.append(modecodesbits[2]);
+        frame<<modecodesbits[2];
         break;
     case DataFormatter::mode3:
-        frame.append(modecodesbits[3]);
+        frame<<modecodesbits[3];
         break;
     case DataFormatter::mode4:
-        frame.append(modecodesbits[4]);
+        frame<<modecodesbits[4];
         break;
     default:
     break;
@@ -566,7 +566,7 @@ QVector<int> &DataFormatter::createFrame(QByteArray &frame_msg)
     }
 
     //interleave block and add
-    frame.append(leaver.interleave(block));
+    frame<<leaver.interleave(block);
 
 
 //    //diff enc test

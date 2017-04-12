@@ -3,6 +3,8 @@
 
 #include <QObject>
 #include <QMutex>
+#include <QWaitCondition>
+#include <QtConcurrent/QtConcurrentRun>
 #include "JMPXInterface.h"
 #include "JDSP.h"
 #include "JSound.h"
@@ -23,6 +25,72 @@ public:
     ~JMPXEncoder();
 
 private:
+
+//this part is for the two threads for the soundcard callback and what process the data
+
+    #define N_BUFFERS 5
+    QWaitCondition buffers_process;
+    QMutex buffers_mut;
+
+    //buffers from the sound card to be processed
+    std::vector<double> buffers_in[N_BUFFERS];
+    int buffers_head_ptr_in=0;
+    int buffers_tail_ptr_in=0;
+    int buffers_used_in=0;
+
+    //buffers to be sent out the sound card
+    std::vector<double> buffers_out[N_BUFFERS];
+    int buffers_head_ptr_out=0;
+    int buffers_tail_ptr_out=0;
+    int buffers_used_out=0;
+
+    //for spooling so we have more buffers processed than needing to be processed
+    bool spooling=false;
+
+    QFuture<void> future_SoundcardInOut_dispatcher;
+    void SoundcardInOut_dispatcher();
+    bool do_SoundcardInOut_dispatcher_cancel=0;
+
+    //inout process (fast 192000)
+    void Update(double *DataIn, double *DataOut, int nFrames);
+
+    //for stopping both threads
+    void StopSoundcardInOut();
+
+//
+
+//this part is for the two threads for the sca (and dsca) callback and what process the data
+
+    QWaitCondition buffers_process_sca;
+    QMutex buffers_mut_sca;
+
+    //buffers from the sound card to be processed
+    std::vector<qint16> buffers_in_sca[N_BUFFERS];
+    int buffers_head_ptr_in_sca=0;
+    int buffers_tail_ptr_in_sca=0;
+    int buffers_used_in_sca=0;
+
+    //buffers to be sent out the sound card (nothing. buffers_used_out_sca is used to count the spooling)
+    int buffers_used_out_sca=0;
+
+    //for spooling so we have more buffers processed than needing to be processed
+    bool spooling_sca=false;
+
+    QFuture<void> future_SCA_dispatcher;
+    void SCA_dispatcher();
+    bool do_SCA_dispatcher_cancel=0;
+
+    //opusSCA input process (48000 or 192000 for JACK)
+    void Update_opusSCA(qint16 *DataIn, qint16 *DataOut, int nFrames);
+
+    //SCA input process (48000 or 192000 for JACK)
+    void Update_SCA(qint16 *DataIn, qint16 *DataOut, int nFrames);
+
+    //for stopping both threads
+    void StopSCA_threads();
+
+//
+
 
     //noise tests
     std::default_random_engine generator;
@@ -213,7 +281,8 @@ public:
     {
         if(SCA_opus==enable&&pJCSound_SCA->IsActive())return;
         SCA_opus=enable;
-        bool wasactive=pJCSound_SCA->IsActive();
+
+        /*bool wasactive=pJCSound_SCA->IsActive();
         pJCSound_SCA->Active(false);
 
         oqpskdataformatter.clearBuffer();
@@ -226,7 +295,7 @@ public:
         pJCSound_SCA->Active(wasactive);
 
         if(SCA_opus&&pJCSound_SCA->IsActive())pOQPSKModulator->StartSpooling();
-         else pOQPSKModulator->StopSpooling();
+         else pOQPSKModulator->StopSpooling();*/
 
     }
     bool GetSCAopus(){return SCA_opus;}
@@ -611,20 +680,17 @@ public:
 
 private slots:
 
-    //output callback (fast 192000)
-    void Update(double *DataIn, double *DataOut, int nFrames);
+    //for threads 1 and 2
+    void SoundcardInOut_Callback(double *DataIn,double *DataOut, int nFrames);
 
-    //SCA input callback (slow 48000)
-    void Update_SCA(double *DataIn,double *DataOut, int nFrames);
-    //
-
-    //opusSCA input callback (slow 48000)
-    void Update_opusSCA(qint16 *DataIn, qint16 *DataOut, int nFrames);
+    //for threads 3 and 4
+    void SCA_Callback(qint16 *DataIn,qint16 *DataOut, int nFrames);
 
     void DSCAsendRds();
 
 private:
     InterleavedStereo16500Hz192000bpsFilter stereofir;//fast fir LPF
+
 private slots:
     void onCallForMoreData(int maxbitswanted);
 };

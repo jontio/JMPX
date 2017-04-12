@@ -60,7 +60,7 @@ public:
 
         RtAudio AnRtAudio;
 
-    	RtAudio::StreamParameters oParameters,iParameters;
+        RtAudio::StreamParameters oParameters,iParameters;
     	unsigned int sampleRate;
     	unsigned int bufferFrames;
         QString wantedInDeviceName;

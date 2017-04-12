@@ -6,6 +6,13 @@
 
 #include <QTimer>
 
+static __inline__ unsigned long long rdtsc(void)
+{
+    unsigned hi, lo;
+    __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
+    return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
+}
+
 JMPXEncoder::JMPXEncoder(QObject *parent):
     JMPXInterface(parent),
 	pTDspGen( new TDspGen(&ASetGen)),
@@ -42,7 +49,11 @@ JMPXEncoder::JMPXEncoder(QObject *parent):
     pJCSound_SCA->iParameters.nChannels=2;//stero input
     pJCSound_SCA->oParameters.nChannels=0;//no output channels
     pJCSound_SCA->options.streamName="JMPX_SCA";
+//#ifdef __UNIX_JACK__
+//    pJCSound_SCA->sampleRate=192000;//192khz (not sure if JACK wants everyone at the same speed)
+//#else
     pJCSound_SCA->sampleRate=48000;//48khz
+//#endif
     SCA_MaxDeviation=3000;//3khz
     SCA_Level=0.1;//10%
     SCA_CarrierFrequency=67500;//67.5khz
@@ -90,6 +101,13 @@ JMPXEncoder::JMPXEncoder(QObject *parent):
 
 JMPXEncoder::~JMPXEncoder()
 {
+
+    //stop SoundcardInOut threads and reset channel
+    StopSoundcardInOut();
+
+    //stop SCA threads and reset channel
+    StopSCA_threads();
+
     pJCSound->Active(false);
     pJCSound_SCA->Active(false);
     delete rdsbpf;
@@ -122,8 +140,26 @@ void JMPXEncoder::Active(bool Enabled)
 {
         if(Enabled==pJCSound->IsActive())return;
         if(Enabled)
-        {//here we dont need lock i think as other threads are stoped
-            disconnect(pJCSound,SIGNAL(SoundEvent(double*,double*,int)),this,SLOT(Update(double*,double*,int)));
+        {
+
+            disconnect(pJCSound,SIGNAL(SoundEvent(double*,double*,int)),this,SLOT(SoundcardInOut_Callback(double*,double*,int)));
+            disconnect(pJCSound_SCA,SIGNAL(SoundEvent(qint16*,qint16*,int)),this,SLOT(SCA_Callback(qint16*,qint16*,int)));
+
+            //stop SoundcardInOut threads and reset channel
+            StopSoundcardInOut();
+
+            //stop SCA threads and reset channel
+            StopSCA_threads();
+
+            //here we dont need lock as other threads should be stoped stoped
+
+            //start SoundcardInOut_dispatcher thread
+            do_SoundcardInOut_dispatcher_cancel=false;
+            future_SoundcardInOut_dispatcher = QtConcurrent::run(this,&JMPXEncoder::SoundcardInOut_dispatcher);
+
+            //start SCA_dispatcher thread
+            do_SCA_dispatcher_cancel=false;
+            future_SCA_dispatcher = QtConcurrent::run(this,&JMPXEncoder::SCA_dispatcher);
 
             ASetGen.SampleRate=pJCSound->sampleRate;
             pTDspGen->ResetSettings();
@@ -142,18 +178,19 @@ void JMPXEncoder::Active(bool Enabled)
             //4.8khz rds bpf
             rdsbpf->setKernel(JFilterDesign::BandPassHanning(57000-2400,57000+2400,pJCSound->sampleRate,512-1));
 
-            //enable sca connections
+            //clear OQPSK buffer
             oqpskdataformatter.clearBuffer();
-            disconnect(pJCSound_SCA,SIGNAL(SoundEvent(double*,double*,int)),this,SLOT(Update_SCA(double*,double*,int)));
-            disconnect(pJCSound_SCA,SIGNAL(SoundEvent(qint16*,qint16*,int)),this,SLOT(Update_opusSCA(qint16*,qint16*,int)));
-            if(SCA_opus){pJCSound_SCA->audioformat=RTAUDIO_SINT16;connect(pJCSound_SCA,SIGNAL(SoundEvent(qint16*,qint16*,int)),this,SLOT(Update_opusSCA(qint16*,qint16*,int)),Qt::DirectConnection);}//DirectConnection!!!
-             else {pJCSound_SCA->audioformat=RTAUDIO_FLOAT64;connect(pJCSound_SCA,SIGNAL(SoundEvent(double*,double*,int)),this,SLOT(Update_SCA(double*,double*,int)),Qt::DirectConnection);}//DirectConnection!!!
 
-            connect(pJCSound,SIGNAL(SoundEvent(double*,double*,int)),this,SLOT(Update(double*,double*,int)),Qt::DirectConnection);//DirectConnection!!!
+            //SCA uses 16 bit int
+            pJCSound_SCA->audioformat=RTAUDIO_SINT16;
+            connect(pJCSound_SCA,SIGNAL(SoundEvent(qint16*,qint16*,int)),this,SLOT(SCA_Callback(qint16*,qint16*,int)),Qt::DirectConnection);//DirectConnection!!!
+
+            //Usual sound card uses double
+            connect(pJCSound,SIGNAL(SoundEvent(double*,double*,int)),this,SLOT(SoundcardInOut_Callback(double*,double*,int)),Qt::DirectConnection);//DirectConnection!!!
 
             //calculate upsample rate and buffer frames so callbacks run at about the same time
             SCA_ratechange=0;
-            SCA_rate=((double)pJCSound->sampleRate)/((double)pJCSound_SCA->sampleRate);
+            SCA_rate=((double)pJCSound->sampleRate)/((double)pJCSound_SCA->sampleRate);// /48000.0;//SCA rate must be 48k as thats the fastest that opus can handle  //
             pJCSound_SCA->bufferFrames=1.0*((double)pJCSound->bufferFrames)/SCA_rate;// 1.0 --> same 0.5 --> twice as often, etc
 
             //setup shared cycle buffer for enough space for 4 calls from the fast callback
@@ -214,8 +251,296 @@ void JMPXEncoder::SetPreEmphasis(TimeConstant timeconst)
     pFMModulator->SetTc(timeconst);
 }
 
-//WARING called from another thread for speed reasons.
-//There are some thread safty concerns here but nothing catastrophic should happen
+//stops thread 1 and 2
+void JMPXEncoder::StopSoundcardInOut()
+{
+    //stop sound thread and dispatcher thread
+    //reset the comm channel between them
+    qDebug()<<"stopping SoundcardInOut callback";
+    pJCSound->Active(false);
+    qDebug()<<"SoundcardInOut callback stoped";
+    if(!future_SoundcardInOut_dispatcher.isFinished())
+    {
+            qDebug()<<"stopping SoundcardInOut_dispatcher";
+            buffers_mut.lock();
+            do_SoundcardInOut_dispatcher_cancel=true;
+            buffers_process.wakeAll();
+            buffers_mut.unlock();
+            future_SoundcardInOut_dispatcher.waitForFinished();
+            do_SoundcardInOut_dispatcher_cancel=false;
+            qDebug()<<"SoundcardInOut_dispatcher stoped";
+    }
+    buffers_head_ptr_in=0;
+    buffers_tail_ptr_in=0;
+    buffers_used_in=0;
+    buffers_head_ptr_out=0;
+    buffers_tail_ptr_out=0;
+    buffers_used_out=0;
+    spooling=false;
+    for(int i=0;i<N_BUFFERS;i++)
+    {
+        buffers_in[i].assign(buffers_in[i].size(),0.0);
+        buffers_out[i].assign(buffers_in[i].size(),0.0);
+    }
+
+}
+
+//thread 1 (192k sound in/out processing thread)
+void JMPXEncoder::SoundcardInOut_dispatcher()
+{
+    qDebug()<<"SoundcardInOut_dispatcher started";
+    while(true)
+    {
+
+        //if we have no data to process then wait
+        buffers_mut.lock();
+        if(buffers_used_in<1)
+        {
+            buffers_process.wait(&buffers_mut);
+        }
+        buffers_mut.unlock();
+
+        //check if reason for waking is to cancel
+        if(do_SoundcardInOut_dispatcher_cancel)break;
+
+        //cycle buffers
+        buffers_tail_ptr_in%=N_BUFFERS;
+        buffers_head_ptr_out%=N_BUFFERS;
+
+        //get size
+        int units=buffers_in[buffers_tail_ptr_in].size();
+        int nFrames=units/2;
+
+        //make sure buffers are of the right size
+        buffers_in[buffers_tail_ptr_in].resize(units,0);
+        buffers_out[buffers_head_ptr_out].resize(units,0);
+
+        //create buffer ptr
+        double *DataIn=buffers_in[buffers_tail_ptr_in].data();
+        double *DataOut=buffers_out[buffers_head_ptr_out].data();
+
+        Update(DataIn,DataOut,nFrames);
+
+        //goto next buffer
+        ++buffers_tail_ptr_in;
+        ++buffers_head_ptr_out;
+
+        buffers_mut.lock();
+        --buffers_used_in;
+        ++buffers_used_out;
+        buffers_mut.unlock();
+
+    }
+    qDebug()<<"SoundcardInOut_dispatcher finished";
+}
+
+//thread 2 (192k sound in/out transfer thread)
+void JMPXEncoder::SoundcardInOut_Callback(double *DataIn,double *DataOut, int nFrames)
+{
+
+    //return if in a cancelling state
+    if(do_SoundcardInOut_dispatcher_cancel)return;
+
+    //if there is no room to store the incoming data then ????
+    buffers_mut.lock();
+    if(buffers_used_in>=N_BUFFERS)
+    {
+        //??? maybe just panic and return and hope at a later time we will have some room
+        buffers_mut.unlock();
+        qDebug()<<"SoundcardOut_Callback overrun";
+        return;
+    }
+    buffers_mut.unlock();
+
+    //size of this buffer and every other buffer. this needs to be the same
+    int units=2*nFrames;
+
+    //if there is no data for us to return then ????
+    buffers_mut.lock();
+    if(buffers_used_out<1)
+    {
+        //??? either we are spooling up or we have an underrun
+        //??? set the spooling flag to tell this fuction to return garbarge
+        qDebug()<<"SoundcardOut_Callback underrun";
+        spooling=true;
+    }
+    if(spooling&&(buffers_used_out+buffers_used_in)>=N_BUFFERS)spooling=false;
+    buffers_mut.unlock();
+
+    if(spooling)qDebug()<<"spooling usual";
+
+    //cycle buffers
+    buffers_head_ptr_in%=N_BUFFERS;
+    buffers_tail_ptr_out%=N_BUFFERS;
+
+    //make sure buffers are of the right size
+    buffers_in[buffers_head_ptr_in].resize(units,0);
+    buffers_out[buffers_tail_ptr_out].resize(units,0);
+
+    double *buffptr_in=buffers_in[buffers_head_ptr_in].data();
+    double *buffptr_out=buffers_out[buffers_tail_ptr_out].data();
+
+    //compy memory
+    memcpy(buffptr_in,DataIn, sizeof(double)*units);
+    memcpy(DataOut,buffptr_out, sizeof(double)*units);
+
+    //goto next buffer
+    ++buffers_head_ptr_in;
+    if(!spooling)++buffers_tail_ptr_out;
+
+    //tell dispatcher thread to process this and any other callback blocks
+    buffers_mut.lock();
+    ++buffers_used_in;
+    if(!spooling)--buffers_used_out;
+
+    if((!spooling)&&(buffers_used_out<(N_BUFFERS-1)))qDebug()<<"dual sound card thread caught a buffer. buffers_used_in=="<<buffers_used_in<<"buffers_used_out=="<<buffers_used_out<<" N_BUFFERS="<<N_BUFFERS;
+
+    buffers_process.wakeAll();
+    buffers_mut.unlock();
+
+}
+
+//stops thread 3 and 4
+void JMPXEncoder::StopSCA_threads()
+{
+    //stop sound thread and dispatcher thread
+    //reset the comm channel between them
+    qDebug()<<"stopping SCA callback";
+    pJCSound_SCA->Active(false);
+    qDebug()<<"SCA callback stoped";
+    if(!future_SCA_dispatcher.isFinished())
+    {
+            qDebug()<<"stopping SCA_dispatcher";
+            buffers_mut_sca.lock();
+            do_SCA_dispatcher_cancel=true;
+            buffers_process_sca.wakeAll();
+            buffers_mut_sca.unlock();
+            future_SCA_dispatcher.waitForFinished();
+            do_SCA_dispatcher_cancel=false;
+            qDebug()<<"SCA_dispatcher stoped";
+    }
+    buffers_head_ptr_in_sca=0;
+    buffers_tail_ptr_in_sca=0;
+    buffers_used_in_sca=0;
+    buffers_used_out_sca=0;
+    spooling_sca=false;
+    for(int i=0;i<N_BUFFERS;i++)
+    {
+        buffers_in_sca[i].assign(buffers_in_sca[i].size(),0);
+    }
+
+}
+
+//thread 3 (SCA audio in processing thread)
+void JMPXEncoder::SCA_dispatcher()
+{
+    qDebug()<<"SCA_dispatcher started";
+    while(true)
+    {
+
+        //if we have no data to process then wait
+        buffers_mut_sca.lock();
+        if(buffers_used_in_sca<1)
+        {
+            buffers_process_sca.wait(&buffers_mut_sca);
+        }
+        buffers_mut_sca.unlock();
+
+        //check if reason for waking is to cancel
+        if(do_SCA_dispatcher_cancel)break;
+
+        //cycle buffers
+        buffers_tail_ptr_in_sca%=N_BUFFERS;
+
+        //get size
+        int units=buffers_in_sca[buffers_tail_ptr_in_sca].size();
+        int nFrames=units/2;
+
+        //make sure buffers are of the right size
+        buffers_in_sca[buffers_tail_ptr_in_sca].resize(units,0);
+
+        //create buffer ptr
+        qint16 *DataIn=buffers_in_sca[buffers_tail_ptr_in_sca].data();
+        qint16 *DataOut=NULL;//nothing comes back
+
+        if(SCA_opus)Update_opusSCA(DataIn,DataOut,nFrames);
+         else Update_SCA(DataIn,DataOut,nFrames);
+
+        //goto next buffer
+        ++buffers_tail_ptr_in_sca;
+
+        buffers_mut_sca.lock();
+        --buffers_used_in_sca;
+        ++buffers_used_out_sca;
+        buffers_mut_sca.unlock();
+
+    }
+    qDebug()<<"SCA_dispatcher finished";
+}
+
+//thread 4 (SCA audio in transfer thread)
+void JMPXEncoder::SCA_Callback(qint16 *DataIn,qint16 *DataOut, int nFrames)
+{
+
+    Q_UNUSED(DataOut);
+
+    //return if in a cancelling state
+    if(do_SCA_dispatcher_cancel)return;
+
+    //if there is no room to store the incoming data then ????
+    buffers_mut_sca.lock();
+    if(buffers_used_in_sca>=N_BUFFERS)
+    {
+        //??? maybe just panic and return and hope at a later time we will have some room
+        buffers_mut_sca.unlock();
+        qDebug()<<"SCA_Callback overrun";
+        return;
+    }
+    buffers_mut_sca.unlock();
+
+    //size of this buffer and every other buffer. this needs to be the same
+    int units=2*nFrames;
+
+    //if there is no data for us to return then ????
+    buffers_mut_sca.lock();
+    if(buffers_used_out_sca<1)
+    {
+        //??? either we are spooling up or we have an underrun
+        //??? set the spooling flag to tell this fuction to return garbarge
+        qDebug()<<"SCA_Callback underrun";
+        spooling_sca=true;
+    }
+    if(spooling_sca&&(buffers_used_out_sca+buffers_used_in_sca)>=N_BUFFERS)spooling_sca=false;
+    buffers_mut_sca.unlock();
+
+    if(spooling_sca)qDebug()<<"spooling_sca";
+
+    //cycle buffers
+    buffers_head_ptr_in_sca%=N_BUFFERS;
+
+    //make sure buffers are of the right size
+    buffers_in_sca[buffers_head_ptr_in_sca].resize(units,0);
+
+    qint16 *buffptr_in=buffers_in_sca[buffers_head_ptr_in_sca].data();
+
+    //compy memory
+    memcpy(buffptr_in,DataIn, sizeof(qint16)*units);
+
+    //goto next buffer
+    ++buffers_head_ptr_in_sca;
+
+    //tell dispatcher thread to process this and any other callback blocks
+    buffers_mut_sca.lock();
+    ++buffers_used_in_sca;
+    if(!spooling_sca)--buffers_used_out_sca;
+
+    if((!spooling_sca)&&(buffers_used_out_sca<(N_BUFFERS-1)))qDebug()<<"dual SCA sound card thread caught a buffer. buffers_used_in=="<<buffers_used_in_sca<<"buffers_used_out=="<<buffers_used_out_sca<<" N_BUFFERS="<<N_BUFFERS;
+
+    buffers_process_sca.wakeAll();
+    buffers_mut_sca.unlock();
+}
+
+//part of thread 1 (called by dispatcher)
 void JMPXEncoder::Update(double *DataIn,double *DataOut, int nFrames)
 {
 
@@ -433,8 +758,7 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int nFrames)
 
 }
 
-//opusSCA input callback
-//WARING called from another thread for speed reasons.
+//part of thread 3 (called by dispatcher)
 void JMPXEncoder::Update_opusSCA(qint16 *DataIn, qint16 *DataOut, int nFrames)
 {
     Q_UNUSED(DataOut);
@@ -476,16 +800,22 @@ void JMPXEncoder::Update_opusSCA(qint16 *DataIn, qint16 *DataOut, int nFrames)
 
 }
 
-//SCA input callback
-//WARING called from another thread for speed reasons.
-void JMPXEncoder::Update_SCA(double *DataIn, double *DataOut, int nFrames)
+//part of thread 3 (called by dispatcher)
+void JMPXEncoder::Update_SCA(qint16 *DataIn, qint16 *DataOut, int nFrames)
 {
     Q_UNUSED(DataOut);
 
     callback_mutex.lock();
-    for(int i=0;i<nFrames*2;i+=2)
+
+    //down sampling to 48000
+    //todo add fir LPF
+    /*int stepper=1;
+    if(pJCSound_SCA->sampleRate=192000)stepper=4;
+    if(nFrames%4)qDebug()<<"cant devide SCA buffer size by 4!!";*/
+
+    for(int i=0;i<nFrames*2;i+=2)//(2*stepper))
     {
-        SCA_buffer[SCA_buf_ptr_head]=(DataIn[i]+DataIn[i+1])*SCA_rate;//sum left and right channels
+        SCA_buffer[SCA_buf_ptr_head]=(((double)DataIn[i])/32767.0+((double)DataIn[i+1])/32767.0)*SCA_rate;//sum left and right channels
         SCA_buf_ptr_head++;SCA_buf_ptr_head%=SCA_buffer.size();
         if(SCA_buf_ptr_head==SCA_buf_ptr_tail)
         {

@@ -1516,7 +1516,7 @@
         <string>Hz</string>
        </property>
        <property name="minimum">
-        <number>10000</number>
+        <number>8000</number>
        </property>
        <property name="maximum">
         <number>92000</number>

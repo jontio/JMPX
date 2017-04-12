@@ -965,7 +965,7 @@ void Options::on_horizontalSlider_scalevel_valueChanged(int value)
     double SCA_Level=((double)ui->horizontalSlider_scalevel->value())/1000.0;
     double eb=SCA_Level*SCA_Level/41283.07807;
     double no=(noiselevel*noiselevel)/192000.0;
-    double ebno=10.0*std::log10(eb/no);
+    double ebno=10.0*log10(eb/no);
     ui->label_noise->setText(((QString)"EbNo %1 dB OQPSK").arg(ebno,0,'f',1,'0'));
 }
 
@@ -979,7 +979,7 @@ Q_UNUSED(value);
     double SCA_Level=((double)ui->horizontalSlider_scalevel->value())/1000.0;
     double eb=SCA_Level*SCA_Level/41283.07807;
     double no=(noiselevel*noiselevel)/192000.0;
-    double ebno=10.0*std::log10(eb/no);
+    double ebno=10.0*log10(eb/no);
     ui->label_noise->setText(((QString)"EbNo %1 dB OQPSK").arg(ebno,0,'f',1,'0'));
 }
 

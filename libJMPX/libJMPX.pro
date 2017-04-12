@@ -11,6 +11,11 @@ QT       -= gui
 TARGET = libJMPX
 TEMPLATE = lib
 
+QMAKE_CXXFLAGS += -std=c++11 -ffast-math
+
+QMAKE_CXXFLAGS_RELEASE -= -O2
+QMAKE_CXXFLAGS_RELEASE += -O3
+
 INCLUDEPATH += ../rtaudio-4.1.2/include \
     ../kiss_fft130
 
@@ -32,10 +37,12 @@ contains(QT_ARCH, i386) {
     #message("64-bit")
     LIBS += -L$$PWD/../libopus-1.2-alpha/lib/64
 }
-}
-
-#libopus library
 LIBS += -llibopus
+}
+unix {
+#libopus library
+LIBS += -lopus
+}
 
 #here we have rtaudio
 #You dont need all these audio APIs.
@@ -46,9 +53,10 @@ win32 {
     #  not sure what the advantages for WASAPI is over DS DEFINES += __WINDOWS_WASAPI__
 }
 unix {
-    DEFINES += __UNIX_JACK__ \
-            __LINUX_PULSE__ \
-            __LINUX_ALSA__
+#select your wanted sound systems
+    DEFINES += __UNIX_JACK__
+    DEFINES += __LINUX_PULSE__
+    DEFINES += __LINUX_ALSA__
 }
 macx {
     DEFINES += __MACOSX_CORE__ \
