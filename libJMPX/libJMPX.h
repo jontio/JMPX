@@ -28,7 +28,7 @@ private:
 
 //this part is for the two threads for the soundcard callback and what process the data
 
-    #define N_BUFFERS 5
+    #define N_BUFFERS 10
     QWaitCondition buffers_process;
     QMutex buffers_mut;
 

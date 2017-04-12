@@ -602,8 +602,13 @@
         </rect>
        </property>
        <property name="currentIndex">
-        <number>2</number>
+        <number>0</number>
        </property>
+       <item>
+        <property name="text">
+         <string>2048</string>
+        </property>
+       </item>
        <item>
         <property name="text">
          <string>4096</string>

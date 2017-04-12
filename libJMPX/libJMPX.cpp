@@ -48,12 +48,13 @@ JMPXEncoder::JMPXEncoder(QObject *parent):
     pJCSound_SCA = new TJCSound(this);
     pJCSound_SCA->iParameters.nChannels=2;//stero input
     pJCSound_SCA->oParameters.nChannels=0;//no output channels
+    pJCSound_SCA->bufferFrames=8096;
     pJCSound_SCA->options.streamName="JMPX_SCA";
-//#ifdef __UNIX_JACK__
-//    pJCSound_SCA->sampleRate=192000;//192khz (not sure if JACK wants everyone at the same speed)
-//#else
+#ifdef __UNIX_JACK__
+    pJCSound_SCA->sampleRate=192000;//192khz (not sure if JACK wants everyone at the same speed)
+#else
     pJCSound_SCA->sampleRate=48000;//48khz
-//#endif
+#endif
     SCA_MaxDeviation=3000;//3khz
     SCA_Level=0.1;//10%
     SCA_CarrierFrequency=67500;//67.5khz
@@ -188,18 +189,13 @@ void JMPXEncoder::Active(bool Enabled)
             //Usual sound card uses double
             connect(pJCSound,SIGNAL(SoundEvent(double*,double*,int)),this,SLOT(SoundcardInOut_Callback(double*,double*,int)),Qt::DirectConnection);//DirectConnection!!!
 
-            //calculate upsample rate and buffer frames so callbacks run at about the same time
-            SCA_ratechange=0;
-            SCA_rate=((double)pJCSound->sampleRate)/((double)pJCSound_SCA->sampleRate);// /48000.0;//SCA rate must be 48k as thats the fastest that opus can handle  //
-            pJCSound_SCA->bufferFrames=1.0*((double)pJCSound->bufferFrames)/SCA_rate;// 1.0 --> same 0.5 --> twice as often, etc
+            //stop SCA working untill we know how big this buffer should be
+            SCA_buffer.clear();
 
-            //setup shared cycle buffer for enough space for 4 calls from the fast callback
-            //SCA_buffer is a mono signal buffer
-            SCA_buffer.fill(0,4*pJCSound->bufferFrames);
-            SCA_buf_ptr_head=0;
-            SCA_buf_ptr_tail=SCA_buffer.size()/2;
-            SCA_buffer_use_percentage=0.5;
-            //
+            //this is what we would like but there is no garentee this is what we will get once the soundcard has started
+            SCA_ratechange=0;
+            SCA_rate=((double)pJCSound->sampleRate)/48000.0;//SCA rate must be 48k as thats the fastest that opus can handle  //
+            pJCSound_SCA->bufferFrames=1.0*((double)pJCSound->bufferFrames)/((((double)pJCSound->sampleRate)/((double)pJCSound_SCA->sampleRate)));// 1.0 --> same 0.5 --> twice as often, etc
 
         }
         pJCSound->Active(Enabled);
@@ -367,7 +363,7 @@ void JMPXEncoder::SoundcardInOut_Callback(double *DataIn,double *DataOut, int nF
     if(spooling&&(buffers_used_out+buffers_used_in)>=N_BUFFERS)spooling=false;
     buffers_mut.unlock();
 
-    if(spooling)qDebug()<<"spooling usual";
+//    if(spooling)qDebug()<<"spooling usual";
 
     //cycle buffers
     buffers_head_ptr_in%=N_BUFFERS;
@@ -393,7 +389,7 @@ void JMPXEncoder::SoundcardInOut_Callback(double *DataIn,double *DataOut, int nF
     ++buffers_used_in;
     if(!spooling)--buffers_used_out;
 
-    if((!spooling)&&(buffers_used_out<(N_BUFFERS-1)))qDebug()<<"dual sound card thread caught a buffer. buffers_used_in=="<<buffers_used_in<<"buffers_used_out=="<<buffers_used_out<<" N_BUFFERS="<<N_BUFFERS;
+//    if((!spooling)&&(buffers_used_out<(N_BUFFERS-1)))qDebug()<<"dual sound card thread caught a buffer. buffers_used_in=="<<buffers_used_in<<"buffers_used_out=="<<buffers_used_out<<" N_BUFFERS="<<N_BUFFERS;
 
     buffers_process.wakeAll();
     buffers_mut.unlock();
@@ -513,7 +509,7 @@ void JMPXEncoder::SCA_Callback(qint16 *DataIn,qint16 *DataOut, int nFrames)
     if(spooling_sca&&(buffers_used_out_sca+buffers_used_in_sca)>=N_BUFFERS)spooling_sca=false;
     buffers_mut_sca.unlock();
 
-    if(spooling_sca)qDebug()<<"spooling_sca";
+//    if(spooling_sca)qDebug()<<"spooling_sca";
 
     //cycle buffers
     buffers_head_ptr_in_sca%=N_BUFFERS;
@@ -534,7 +530,7 @@ void JMPXEncoder::SCA_Callback(qint16 *DataIn,qint16 *DataOut, int nFrames)
     ++buffers_used_in_sca;
     if(!spooling_sca)--buffers_used_out_sca;
 
-    if((!spooling_sca)&&(buffers_used_out_sca<(N_BUFFERS-1)))qDebug()<<"dual SCA sound card thread caught a buffer. buffers_used_in=="<<buffers_used_in_sca<<"buffers_used_out=="<<buffers_used_out_sca<<" N_BUFFERS="<<N_BUFFERS;
+//    if((!spooling_sca)&&(buffers_used_out_sca<(N_BUFFERS-1)))qDebug()<<"dual SCA sound card thread caught a buffer. buffers_used_in=="<<buffers_used_in_sca<<"buffers_used_out=="<<buffers_used_out_sca<<" N_BUFFERS="<<N_BUFFERS;
 
     buffers_process_sca.wakeAll();
     buffers_mut_sca.unlock();
@@ -547,8 +543,13 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int nFrames)
     callback_mutex.lock();
 
     //calculate SCA buffer usage
-    SCA_buffer_use_percentage=((double)(SCA_buf_ptr_head-SCA_buf_ptr_tail))/((double)SCA_buffer.size());
-    if(SCA_buffer_use_percentage<0)SCA_buffer_use_percentage=1.0+SCA_buffer_use_percentage;
+    if(!SCA_buffer.isEmpty())
+    {
+        SCA_buffer_use_percentage=((double)(SCA_buf_ptr_head-SCA_buf_ptr_tail))/((double)SCA_buffer.size());
+        if(SCA_buffer_use_percentage<0)SCA_buffer_use_percentage=1.0+SCA_buffer_use_percentage;
+    }
+     else SCA_buffer_use_percentage=0;
+
     double rval;
 	double lval;
     double sca_val=0;
@@ -587,7 +588,7 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int nFrames)
             if(RDS_enabled)DataOut[i]+=rdslevel*rdsbpf->Update_Single(pWaveTable->WTSin3Value()*rds->outputsignal[i/2]);//RDS at 57kHz
 
             //SCA start
-            if(SCA_enabled)
+            if((SCA_enabled)&&(!SCA_buffer.isEmpty()))
             {
                 if(!SCA_opus)
                 {
@@ -683,7 +684,7 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int nFrames)
         if(RDS_enabled)DataOut[i]+=rdslevel*rdsbpf->Update_Single(pWaveTable->WTSin3Value()*rds->outputsignal[i/2]);//RDS at 57kHz
 
         //SCA start
-        if(SCA_enabled)
+        if((SCA_enabled)&&(!SCA_buffer.isEmpty()))
         {
             if(!SCA_opus)
             {
@@ -765,23 +766,52 @@ void JMPXEncoder::Update_opusSCA(qint16 *DataIn, qint16 *DataOut, int nFrames)
 
     callback_mutex.lock();
 
+    //this is not used by us directly but in case the user switches back to SCA. also SCA_buffer.size() can't be zero for us to work
+    if(SCA_buffer.isEmpty())
+    {
+
+        //setup shared cycle buffer for enough space for 4 calls from the fast callback
+        //SCA_buffer is a mono signal buffer
+        SCA_buffer.fill(0,4*qMax((int)pJCSound_SCA->bufferFrames,1024));
+        SCA_buf_ptr_head=0;
+        SCA_buf_ptr_tail=SCA_buffer.size()/2;
+        SCA_buffer_use_percentage=0.5;
+        SCA_ratechange=0;
+        SCA_rate=((double)pJCSound->sampleRate)/48000.0;//SCA rate must be 48k as thats the fastest that opus can handle  //
+        //
+
+    }
+
     double sca_val=0;
 
+    //CHANNELS must be 2
+
+    //down sampling to 48000 if needed. we should have a LPF if this is done but who is likly to be sending frequencies above 24kHz
+    //todo add fir LPF
+    int stepper=1;
+    if(pJCSound_SCA->sampleRate==192000)stepper=4;
+    if(nFrames%4)qDebug()<<"cant devide SCA buffer size by 4!!";
+
     static int in_ptr=0;
-    for(int i=0;i<nFrames*CHANNELS;i++)
+    for(int i=0;i<nFrames*CHANNELS;i+=(2*stepper))
     {
 
         sca_val=((double)DataIn[i])/32767.0;
         if(fabs(sca_val)>scabigval)scabigval=fabs(sca_val);
+        sca_val=((double)DataIn[i+1])/32767.0;
+        if(fabs(sca_val)>scabigval)scabigval=fabs(sca_val);
 
-        if(in_ptr%2==i%2)//just incase something goes wrong with L/R sync
+        if(in_ptr%2!=i%2)//just incase something goes wrong with L/R sync
         {
-            i++;
-            if(i>=nFrames*CHANNELS)break;
+            qDebug()<<"LR stuffup"<<in_ptr<<i;
+            in_ptr++;
+            in_ptr%=FRAME_SIZE*CHANNELS;
+
         }
 
         in[in_ptr]=DataIn[i];
-        in_ptr++;in_ptr%=FRAME_SIZE*CHANNELS;
+        in[in_ptr+1]=DataIn[i+1];
+        in_ptr+=2;in_ptr%=FRAME_SIZE*CHANNELS;
         if(!in_ptr)
         {
 
@@ -807,16 +837,31 @@ void JMPXEncoder::Update_SCA(qint16 *DataIn, qint16 *DataOut, int nFrames)
 
     callback_mutex.lock();
 
-    //down sampling to 48000
-    //todo add fir LPF
-    /*int stepper=1;
-    if(pJCSound_SCA->sampleRate=192000)stepper=4;
-    if(nFrames%4)qDebug()<<"cant devide SCA buffer size by 4!!";*/
+    if(SCA_buffer.isEmpty())
+    {
 
-    for(int i=0;i<nFrames*2;i+=2)//(2*stepper))
+        //setup shared cycle buffer for enough space for 4 calls from the fast callback
+        //SCA_buffer is a mono signal buffer
+        SCA_buffer.fill(0,4*qMax((int)pJCSound_SCA->bufferFrames,1024));
+        SCA_buf_ptr_head=0;
+        SCA_buf_ptr_tail=SCA_buffer.size()/2;
+        SCA_buffer_use_percentage=0.5;
+        SCA_ratechange=0;
+        SCA_rate=((double)pJCSound->sampleRate)/48000.0;//SCA rate must be 48k as thats the fastest that opus can handle  //
+        //
+
+    }
+
+    //down sampling to 48000 if needed. we should have a LPF if this is done but who is likly to be sending frequencies above 24kHz
+    //todo add fir LPF
+    int stepper=1;
+    if(pJCSound_SCA->sampleRate==192000)stepper=4;
+    if(nFrames%4)qDebug()<<"cant devide SCA buffer size by 4!!";
+
+    for(int i=0;i<nFrames*2;i+=(2*stepper))
     {
         SCA_buffer[SCA_buf_ptr_head]=(((double)DataIn[i])/32767.0+((double)DataIn[i+1])/32767.0)*SCA_rate;//sum left and right channels
-        SCA_buf_ptr_head++;SCA_buf_ptr_head%=SCA_buffer.size();
+        SCA_buf_ptr_head++;if(SCA_buf_ptr_head>=SCA_buffer.size())SCA_buf_ptr_head=0;
         if(SCA_buf_ptr_head==SCA_buf_ptr_tail)
         {
             qDebug()<<"SCA input Overflow";
