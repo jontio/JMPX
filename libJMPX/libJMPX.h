@@ -294,8 +294,10 @@ public:
          else {pJCSound_SCA->audioformat=RTAUDIO_FLOAT64;connect(pJCSound_SCA,SIGNAL(SoundEvent(double*,double*,int)),this,SLOT(Update_SCA(double*,double*,int)),Qt::DirectConnection);}//DirectConnection!!!
         pJCSound_SCA->Active(wasactive);
 
+        */
+
         if(SCA_opus&&pJCSound_SCA->IsActive())pOQPSKModulator->StartSpooling();
-         else pOQPSKModulator->StopSpooling();*/
+         else pOQPSKModulator->StopSpooling();
 
     }
     bool GetSCAopus(){return SCA_opus;}
