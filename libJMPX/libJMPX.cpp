@@ -19,6 +19,7 @@ JMPXEncoder::JMPXEncoder(QObject *parent):
     pWaveTable( new WaveTable(pTDspGen.get(),19000)),
     pFMModulator( new FMModulator(pTDspGen.get()))
 {
+    _GotError=false;
 	stereo=true;
     RDS_enabled=true;
     SCA_enabled=true;
@@ -139,6 +140,7 @@ void JMPXEncoder::DSCAsendRds()
 
 void JMPXEncoder::Active(bool Enabled)
 {
+        _GotError=false;
         if(Enabled==pJCSound->IsActive())return;
         if(Enabled)
         {
@@ -198,8 +200,37 @@ void JMPXEncoder::Active(bool Enabled)
             pJCSound_SCA->bufferFrames=1.0*((double)pJCSound->bufferFrames)/((((double)pJCSound->sampleRate)/((double)pJCSound_SCA->sampleRate)));// 1.0 --> same 0.5 --> twice as often, etc
 
         }
-        pJCSound->Active(Enabled);
-        pJCSound_SCA->Active(SCA_enabled&&Enabled);
+
+        try
+        {
+            pJCSound->Active(Enabled);
+            if(pJCSound->GotError)throw 1;
+            pJCSound_SCA->Active(SCA_enabled&&Enabled);
+            if(pJCSound_SCA->GotError)throw 2;
+        }
+
+        catch(int e)
+        {
+            _GotError=true;
+            switch(e)
+            {
+            case 1:
+                LastErrorMessage=pJCSound->LastErrorMessage;
+                break;
+            case 2:
+                LastErrorMessage="SCA input : "+pJCSound_SCA->LastErrorMessage;
+                break;
+            default:
+                LastErrorMessage="unknowen";
+            }
+            pJCSound->GotError=false;
+            pJCSound->Active(false);
+            pJCSound->GotError=false;
+            pJCSound_SCA->GotError=false;
+            pJCSound->Active(false);
+            pJCSound_SCA->GotError=false;
+        }
+
         scaPeak.zero();
         lPeak.zero();
         rPeak.zero();

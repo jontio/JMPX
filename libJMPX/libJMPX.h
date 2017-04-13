@@ -92,6 +92,10 @@ private:
 //
 
 
+    //for error responce when starting or stopping the audio
+    std::string LastErrorMessage;
+    bool _GotError;
+
     //noise tests
     std::default_random_engine generator;
     double noiselevel;
@@ -550,8 +554,9 @@ public:
     void SetPreEmphasis(TimeConstant timeconst);
     TimeConstant GetPreEmphasis();
 
-    bool GotError(){return pJCSound->GotError;}
-    const char* GetLastRTAudioError(){pJCSound->GotError=false;return pJCSound->LastErrorMessage.data();}
+    //currently this is for just errors with starting and stopping the audio
+    bool GotError(){return _GotError;}
+    const char* GetLastRTAudioError(){_GotError=false;return LastErrorMessage.data();}
 
     TSigStats* GetSignalStats();
 

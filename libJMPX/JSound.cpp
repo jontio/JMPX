@@ -72,7 +72,6 @@ void TJCSound::PopulateDevices()
 		LastErrorMessage=e.getMessage();
 		GotError=true;
 	}
-	if(GotError)throw(LastErrorMessage.c_str());
 }
 
 bool TJCSound::SetSoundCardInByName()
