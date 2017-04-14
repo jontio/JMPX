@@ -850,14 +850,27 @@ void MovingAverage::setSize(int size)
     MASz=MABuffer.size();
     MAPtr=0;
     Val=0;
+    PrecisionDilutionCorrectCnt=MASz;//correct rounding error every so often
 }
 
 double MovingAverage::Update(double sig)
 {
+
+    if(PrecisionDilutionCorrectCnt)PrecisionDilutionCorrectCnt--;
+     else
+     {
+        MASum=0;
+        for(int i=0;i<MASz;++i)
+        {
+            MASum+=MABuffer[i];
+        }
+        PrecisionDilutionCorrectCnt=MASz;
+     }
+
     MASum=MASum-MABuffer[MAPtr];
     MASum=MASum+sig;
     MABuffer[MAPtr]=sig;
-    MAPtr++;MAPtr%=MASz;
+    MAPtr++;if(MAPtr>=MASz)MAPtr=0;
     Val=MASum/((double)MASz);
     return Val;
 }

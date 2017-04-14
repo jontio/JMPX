@@ -366,6 +366,7 @@ private:
     double MASum;
     std::vector<double> MABuffer;
     int MAPtr;
+    int PrecisionDilutionCorrectCnt;
 };
 
 //-------------------
