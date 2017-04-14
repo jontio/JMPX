@@ -14,6 +14,16 @@ static __inline__ unsigned long long rdtsc(void)
     return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
 }
 
+//these run the dispatchers
+void Usual_Runnable::run()
+{
+    inst->SoundcardInOut_dispatcher();
+}
+void SCA_Runnable::run()
+{
+    inst->SCA_dispatcher();
+}
+
 JMPXEncoder::JMPXEncoder(QObject *parent):
     JMPXInterface(parent),
 	pTDspGen( new TDspGen(&ASetGen)),
@@ -104,15 +114,17 @@ JMPXEncoder::JMPXEncoder(QObject *parent):
 
 JMPXEncoder::~JMPXEncoder()
 {
-
-    //stop SoundcardInOut threads and reset channel
-    StopSoundcardInOut();
-
-    //stop SCA threads and reset channel
-    StopSCA_threads();
-
+    //stop the sound card
+    pJCSound->GotError=false;
     pJCSound->Active(false);
-    pJCSound_SCA->Active(false);
+    pJCSound->GotError=false;
+    pJCSound_SCA->GotError=false;
+    pJCSound->Active(false);
+    pJCSound_SCA->GotError=false;
+
+    //stop SoundcardInOut threads, SCA thread and reset channel
+    StopTheThreadPool();
+
     delete rdsbpf;
     opus_encoder_destroy(encoder);
 }
@@ -148,48 +160,26 @@ void JMPXEncoder::Active(bool Enabled)
         disconnect(pJCSound,SIGNAL(SoundEvent(double*,double*,int)),this,SLOT(SoundcardInOut_Callback(double*,double*,int)));
         disconnect(pJCSound_SCA,SIGNAL(SoundEvent(qint16*,qint16*,int)),this,SLOT(SCA_Callback(qint16*,qint16*,int)));
 
-        //stop SoundcardInOut threads and reset channel
-        StopSoundcardInOut();
+        //stop the sound cards
+        pJCSound->GotError=false;
+        pJCSound->Active(false);
+        pJCSound->GotError=false;
+        pJCSound_SCA->GotError=false;
+        pJCSound->Active(false);
+        pJCSound_SCA->GotError=false;
 
-        //stop SCA threads and reset channel
-        StopSCA_threads();
+        //stop SoundcardInOut threads, SCA thread and reset channel
+        StopTheThreadPool();
 
         if(Enabled)
         {
             //here we dont need lock as other threads should be stoped
 
             //we should already have 2 threads set aside for us in the tp thread pool
-#if QT_VERSION_MAJOR >=5 && QT_VERSION_MINOR>=4
-            //start SoundcardInOut_dispatcher thread and wait till it has started
-            do_SoundcardInOut_dispatcher_cancel=true;
-            future_SoundcardInOut_dispatcher = QtConcurrent::run(tp,this,&JMPXEncoder::SoundcardInOut_dispatcher);
-            while(do_SoundcardInOut_dispatcher_cancel)usleep(10000);
 
-            //start SCA_dispatcher thread and wait till it has started
-            do_SCA_dispatcher_cancel=true;
-            future_SCA_dispatcher = QtConcurrent::run(tp,this,&JMPXEncoder::SCA_dispatcher);
-            while(do_SCA_dispatcher_cancel)usleep(10000);
-#else //this is because with old versions of Qt you cant change the threadpool. as an alternitive we could use a class derived from QRunnable with our thread pool
-            //start SoundcardInOut_dispatcher thread and wait till it has started
-            do_SoundcardInOut_dispatcher_cancel=true;
-            future_SoundcardInOut_dispatcher = QtConcurrent::run(this,&JMPXEncoder::SoundcardInOut_dispatcher);
-            usleep(300000);
-            while(do_SoundcardInOut_dispatcher_cancel)
-            {
-                usleep(1000000);
-                if(do_SoundcardInOut_dispatcher_cancel)QThreadPool::globalInstance()->setMaxThreadCount(QThreadPool::globalInstance()->maxThreadCount()+1);
-            }
+            qDebug()<<"threads in pool == "<<tp->maxThreadCount();
 
-            //start SCA_dispatcher thread and wait till it has started
-            do_SCA_dispatcher_cancel=true;
-            future_SCA_dispatcher = QtConcurrent::run(this,&JMPXEncoder::SCA_dispatcher);
-            usleep(300000);
-            while(do_SCA_dispatcher_cancel)
-            {
-                usleep(1000000);
-                if(do_SCA_dispatcher_cancel)QThreadPool::globalInstance()->setMaxThreadCount(QThreadPool::globalInstance()->maxThreadCount()+1);
-            }
-#endif
+            StartTheThreadPool();
 
             ASetGen.SampleRate=pJCSound->sampleRate;
             pTDspGen->ResetSettings();
@@ -305,25 +295,42 @@ void JMPXEncoder::SetPreEmphasis(TimeConstant timeconst)
     pFMModulator->SetTc(timeconst);
 }
 
-//stops thread 1 and 2
-void JMPXEncoder::StopSoundcardInOut()
+//starts the 2 threads
+void JMPXEncoder::StartTheThreadPool()
 {
-    //stop sound thread and dispatcher thread
-    //reset the comm channel between them
-    qDebug()<<"stopping SoundcardInOut callback";
-    pJCSound->Active(false);
-    qDebug()<<"SoundcardInOut callback stoped";
-    if(!future_SoundcardInOut_dispatcher.isFinished())
-    {
-            qDebug()<<"stopping SoundcardInOut_dispatcher";
-            buffers_mut.lock();
-            do_SoundcardInOut_dispatcher_cancel=true;
-            buffers_process.wakeAll();
-            buffers_mut.unlock();
-            future_SoundcardInOut_dispatcher.waitForFinished();
-            do_SoundcardInOut_dispatcher_cancel=false;
-            qDebug()<<"SoundcardInOut_dispatcher stoped";
-    }
+    //start SoundcardInOut_dispatcher thread and wait till it has started
+    do_SoundcardInOut_dispatcher_cancel=true;
+    Usual_Runnable *usual_runnable = new Usual_Runnable();
+    usual_runnable->setAutoDelete(true);
+    usual_runnable->inst=this;
+    tp->start(usual_runnable,QThread::TimeCriticalPriority);
+    while(do_SoundcardInOut_dispatcher_cancel)usleep(10000);
+
+    //start SCA_dispatcher thread and wait till it has started
+    do_SCA_dispatcher_cancel=true;
+    SCA_Runnable *sca_runnable = new SCA_Runnable();
+    sca_runnable->setAutoDelete(true);
+    sca_runnable->inst=this;
+    tp->start(sca_runnable,QThread::TimeCriticalPriority);
+    while(do_SCA_dispatcher_cancel)usleep(10000);
+}
+
+//stops the 2 threads
+void JMPXEncoder::StopTheThreadPool()
+{
+
+    buffers_mut.lock();
+    do_SoundcardInOut_dispatcher_cancel=true;
+    buffers_process.wakeAll();
+    buffers_mut.unlock();
+
+    buffers_mut_sca.lock();
+    do_SCA_dispatcher_cancel=true;
+    buffers_process_sca.wakeAll();
+    buffers_mut_sca.unlock();
+
+    tp->waitForDone();
+
     buffers_head_ptr_in=0;
     buffers_tail_ptr_in=0;
     buffers_used_in=0;
@@ -335,6 +342,16 @@ void JMPXEncoder::StopSoundcardInOut()
     {
         buffers_in[i].assign(buffers_in[i].size(),0.0);
         buffers_out[i].assign(buffers_in[i].size(),0.0);
+    }
+
+    buffers_head_ptr_in_sca=0;
+    buffers_tail_ptr_in_sca=0;
+    buffers_used_in_sca=0;
+    buffers_used_out_sca=0;
+    spooling_sca=false;
+    for(int i=0;i<N_BUFFERS;i++)
+    {
+        buffers_in_sca[i].assign(buffers_in_sca[i].size(),0);
     }
 
 }
@@ -452,37 +469,6 @@ void JMPXEncoder::SoundcardInOut_Callback(double *DataIn,double *DataOut, int nF
 
     buffers_process.wakeAll();
     buffers_mut.unlock();
-
-}
-
-//stops thread 3 and 4
-void JMPXEncoder::StopSCA_threads()
-{
-    //stop sound thread and dispatcher thread
-    //reset the comm channel between them
-    qDebug()<<"stopping SCA callback";
-    pJCSound_SCA->Active(false);
-    qDebug()<<"SCA callback stoped";
-    if(!future_SCA_dispatcher.isFinished())
-    {
-            qDebug()<<"stopping SCA_dispatcher";
-            buffers_mut_sca.lock();
-            do_SCA_dispatcher_cancel=true;
-            buffers_process_sca.wakeAll();
-            buffers_mut_sca.unlock();
-            future_SCA_dispatcher.waitForFinished();
-            do_SCA_dispatcher_cancel=false;
-            qDebug()<<"SCA_dispatcher stoped";
-    }
-    buffers_head_ptr_in_sca=0;
-    buffers_tail_ptr_in_sca=0;
-    buffers_used_in_sca=0;
-    buffers_used_out_sca=0;
-    spooling_sca=false;
-    for(int i=0;i<N_BUFFERS;i++)
-    {
-        buffers_in_sca[i].assign(buffers_in_sca[i].size(),0);
-    }
 
 }
 

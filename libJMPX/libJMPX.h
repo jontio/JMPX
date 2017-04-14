@@ -20,6 +20,21 @@
 #include "oqpskmodulator.h"
 #include "opus/opus.h"
 
+//these are for our thread pool
+class JMPXEncoder;
+class Usual_Runnable : public QRunnable
+{
+    void run();
+public:
+    JMPXEncoder *inst;
+};
+class SCA_Runnable : public QRunnable
+{
+    void run();
+public:
+    JMPXEncoder *inst;
+};
+
 class JMPXEncoder : public JMPXInterface
 {
      Q_OBJECT
@@ -29,11 +44,20 @@ public:
 
 private:
 
+    //i dont like this and I preferr https://github.com/jontio/JMPX/tree/0a8a74e16e247cff80d1060b608ab79ebb47333b but thread pool cant be selected before qt 5.4
+    //also a lot of the things below shouldn't be in this class but I'm not going to move them any time soon
+    friend class SCA_Runnable;
+    friend class Usual_Runnable;
+    SCA_Runnable *sca_runnable;
+    Usual_Runnable *usual_runnable;
+
+    void StartTheThreadPool();
+    void StopTheThreadPool();
+    QThreadPool *tp;
+    #define N_BUFFERS 10
+
 //this part is for the two threads for the soundcard callback and what process the data
 
-    QThreadPool *tp;
-
-    #define N_BUFFERS 10
     QWaitCondition buffers_process;
     QMutex buffers_mut;
 
@@ -58,9 +82,6 @@ private:
 
     //inout process (fast 192000)
     void Update(double *DataIn, double *DataOut, int nFrames);
-
-    //for stopping both threads
-    void StopSoundcardInOut();
 
 //
 
@@ -90,9 +111,6 @@ private:
 
     //SCA input process (48000 96000 or 192000 for JACK)
     void Update_SCA(qint16 *DataIn, qint16 *DataOut, int nFrames);
-
-    //for stopping both threads
-    void StopSCA_threads();
 
 //
 
