@@ -4,7 +4,6 @@
 #include <QObject>
 #include <QMutex>
 #include <QWaitCondition>
-#include <QtConcurrent/QtConcurrentRun>
 #include "JMPXInterface.h"
 #include "JDSP.h"
 #include "JSound.h"
@@ -76,7 +75,6 @@ private:
     //for spooling so we have more buffers processed than needing to be processed
     bool spooling=false;
 
-    QFuture<void> future_SoundcardInOut_dispatcher;
     void SoundcardInOut_dispatcher();
     bool do_SoundcardInOut_dispatcher_cancel=0;
 
@@ -102,7 +100,6 @@ private:
     //for spooling so we have more buffers processed than needing to be processed
     bool spooling_sca=false;
 
-    QFuture<void> future_SCA_dispatcher;
     void SCA_dispatcher();
     bool do_SCA_dispatcher_cancel=0;
 
