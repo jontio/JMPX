@@ -1,6 +1,7 @@
 #include "libJMPX.h"
 #include <QDebug>
 #include <QtEndian>
+#include <unistd.h>
 
 #include <random>
 
@@ -35,12 +36,16 @@ JMPXEncoder::JMPXEncoder(QObject *parent):
     sigstats.outvol=0.0;
     sigstats.opusbufferuseagepercent=0.0;
 
+    //reserve 2 threads for the SCA and the other one for the usual one
+    tp=new QThreadPool(this);
+    tp->setMaxThreadCount(2);
+
     pOQPSKModulator = new OQPSKModulator(pTDspGen.get(),this);
 
     pJCSound = new TJCSound(this);
     pJCSound->iParameters.nChannels=2;
     pJCSound->oParameters.nChannels=2;
-    pJCSound->sampleRate=192000;
+    pJCSound->sampleRate=192000;//default setting
     pJCSound->bufferFrames=8096;
     pJCSound->options.streamName="JMPX";
     rds = new RDS(this);
@@ -51,11 +56,7 @@ JMPXEncoder::JMPXEncoder(QObject *parent):
     pJCSound_SCA->oParameters.nChannels=0;//no output channels
     pJCSound_SCA->bufferFrames=8096;
     pJCSound_SCA->options.streamName="JMPX_SCA";
-#ifdef __UNIX_JACK__
-    pJCSound_SCA->sampleRate=192000;//192khz (not sure if JACK wants everyone at the same speed)
-#else
-    pJCSound_SCA->sampleRate=48000;//48khz
-#endif
+    pJCSound_SCA->sampleRate=48000;//default setting
     SCA_MaxDeviation=3000;//3khz
     SCA_Level=0.1;//10%
     SCA_CarrierFrequency=67500;//67.5khz
@@ -142,27 +143,53 @@ void JMPXEncoder::Active(bool Enabled)
 {
         _GotError=false;
         if(Enabled==pJCSound->IsActive())return;
+
+        //disconnect signals/slots
+        disconnect(pJCSound,SIGNAL(SoundEvent(double*,double*,int)),this,SLOT(SoundcardInOut_Callback(double*,double*,int)));
+        disconnect(pJCSound_SCA,SIGNAL(SoundEvent(qint16*,qint16*,int)),this,SLOT(SCA_Callback(qint16*,qint16*,int)));
+
+        //stop SoundcardInOut threads and reset channel
+        StopSoundcardInOut();
+
+        //stop SCA threads and reset channel
+        StopSCA_threads();
+
         if(Enabled)
         {
+            //here we dont need lock as other threads should be stoped
 
-            disconnect(pJCSound,SIGNAL(SoundEvent(double*,double*,int)),this,SLOT(SoundcardInOut_Callback(double*,double*,int)));
-            disconnect(pJCSound_SCA,SIGNAL(SoundEvent(qint16*,qint16*,int)),this,SLOT(SCA_Callback(qint16*,qint16*,int)));
+            //we should already have 2 threads set aside for us in the tp thread pool
+#if QT_VERSION_MAJOR >=5 && QT_VERSION_MINOR>=4
+            //start SoundcardInOut_dispatcher thread and wait till it has started
+            do_SoundcardInOut_dispatcher_cancel=true;
+            future_SoundcardInOut_dispatcher = QtConcurrent::run(tp,this,&JMPXEncoder::SoundcardInOut_dispatcher);
+            while(do_SoundcardInOut_dispatcher_cancel)usleep(10000);
 
-            //stop SoundcardInOut threads and reset channel
-            StopSoundcardInOut();
-
-            //stop SCA threads and reset channel
-            StopSCA_threads();
-
-            //here we dont need lock as other threads should be stoped stoped
-
-            //start SoundcardInOut_dispatcher thread
-            do_SoundcardInOut_dispatcher_cancel=false;
+            //start SCA_dispatcher thread and wait till it has started
+            do_SCA_dispatcher_cancel=true;
+            future_SCA_dispatcher = QtConcurrent::run(tp,this,&JMPXEncoder::SCA_dispatcher);
+            while(do_SCA_dispatcher_cancel)usleep(10000);
+#else //this is because with old versions of Qt you cant change the threadpool. as an alternitive we could use a class derived from QRunnable with our thread pool
+            //start SoundcardInOut_dispatcher thread and wait till it has started
+            do_SoundcardInOut_dispatcher_cancel=true;
             future_SoundcardInOut_dispatcher = QtConcurrent::run(this,&JMPXEncoder::SoundcardInOut_dispatcher);
+            usleep(300000);
+            while(do_SoundcardInOut_dispatcher_cancel)
+            {
+                usleep(1000000);
+                if(do_SoundcardInOut_dispatcher_cancel)QThreadPool::globalInstance()->setMaxThreadCount(QThreadPool::globalInstance()->maxThreadCount()+1);
+            }
 
-            //start SCA_dispatcher thread
-            do_SCA_dispatcher_cancel=false;
+            //start SCA_dispatcher thread and wait till it has started
+            do_SCA_dispatcher_cancel=true;
             future_SCA_dispatcher = QtConcurrent::run(this,&JMPXEncoder::SCA_dispatcher);
+            usleep(300000);
+            while(do_SCA_dispatcher_cancel)
+            {
+                usleep(1000000);
+                if(do_SCA_dispatcher_cancel)QThreadPool::globalInstance()->setMaxThreadCount(QThreadPool::globalInstance()->maxThreadCount()+1);
+            }
+#endif
 
             ASetGen.SampleRate=pJCSound->sampleRate;
             pTDspGen->ResetSettings();
@@ -315,6 +342,7 @@ void JMPXEncoder::StopSoundcardInOut()
 //thread 1 (192k sound in/out processing thread)
 void JMPXEncoder::SoundcardInOut_dispatcher()
 {
+    do_SoundcardInOut_dispatcher_cancel=false;
     qDebug()<<"SoundcardInOut_dispatcher started";
     while(true)
     {
@@ -461,6 +489,7 @@ void JMPXEncoder::StopSCA_threads()
 //thread 3 (SCA audio in processing thread)
 void JMPXEncoder::SCA_dispatcher()
 {
+    do_SCA_dispatcher_cancel=false;
     qDebug()<<"SCA_dispatcher started";
     while(true)
     {
@@ -820,8 +849,8 @@ void JMPXEncoder::Update_opusSCA(qint16 *DataIn, qint16 *DataOut, int nFrames)
     //down sampling to 48000 if needed. we should have a LPF if this is done but who is likly to be sending frequencies above 24kHz
     //todo add fir LPF
     int stepper=1;
-    if(pJCSound_SCA->sampleRate==192000)stepper=4;
-    if(nFrames%4)qDebug()<<"cant devide SCA buffer size by 4!!";
+    if(pJCSound_SCA->sampleRate==96000){stepper=2;if(nFrames%2)qDebug()<<"cant devide SCA buffer size by 2!!";}
+    if(pJCSound_SCA->sampleRate==192000){stepper=4;if(nFrames%4)qDebug()<<"cant devide SCA buffer size by 4!!";}
 
     static int in_ptr=0;
     for(int i=0;i<nFrames*CHANNELS;i+=(2*stepper))
@@ -886,8 +915,8 @@ void JMPXEncoder::Update_SCA(qint16 *DataIn, qint16 *DataOut, int nFrames)
     //down sampling to 48000 if needed. we should have a LPF if this is done but who is likly to be sending frequencies above 24kHz
     //todo add fir LPF
     int stepper=1;
-    if(pJCSound_SCA->sampleRate==192000)stepper=4;
-    if(nFrames%4)qDebug()<<"cant devide SCA buffer size by 4!!";
+    if(pJCSound_SCA->sampleRate==96000){stepper=2;if(nFrames%2)qDebug()<<"cant devide SCA buffer size by 2!!";}
+    if(pJCSound_SCA->sampleRate==192000){stepper=4;if(nFrames%4)qDebug()<<"cant devide SCA buffer size by 4!!";}
 
     for(int i=0;i<nFrames*2;i+=(2*stepper))
     {

@@ -172,7 +172,6 @@ void MainWindow::on_checkBox_modulate_stateChanged(int state)
         msgBox.exec();
         state=false;
         pJMPX->Active(false);
-        ui->checkBox_modulate->setChecked(false);
     }
     if(state)ptimer->start();
      else ptimer->stop();

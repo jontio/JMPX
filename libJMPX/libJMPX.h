@@ -12,6 +12,9 @@
 
 #include "rds.h"
 
+#include <QThreadPool>
+#include <QRunnable>
+
 #include <random>
 
 #include "oqpskmodulator.h"
@@ -27,6 +30,8 @@ public:
 private:
 
 //this part is for the two threads for the soundcard callback and what process the data
+
+    QThreadPool *tp;
 
     #define N_BUFFERS 10
     QWaitCondition buffers_process;
@@ -80,10 +85,10 @@ private:
     void SCA_dispatcher();
     bool do_SCA_dispatcher_cancel=0;
 
-    //opusSCA input process (48000 or 192000 for JACK)
+    //opusSCA input process (48000 96000 or 192000 for JACK)
     void Update_opusSCA(qint16 *DataIn, qint16 *DataOut, int nFrames);
 
-    //SCA input process (48000 or 192000 for JACK)
+    //SCA input process (48000 96000 or 192000 for JACK)
     void Update_SCA(qint16 *DataIn, qint16 *DataOut, int nFrames);
 
     //for stopping both threads
@@ -547,7 +552,18 @@ public:
         return pJCSound->oParameters.deviceId;
     }
 
-    void SetSampleRate(int sampleRate){pJCSound->sampleRate=sampleRate;}
+    //current valid rates are 48k,96k and 192k
+    //this is because of jack that wants everyone to be at the same rate
+    //not error check is currently done.
+    void SetSampleRate(int sampleRate)
+    {
+#ifdef __UNIX_JACK__
+        pJCSound_SCA->sampleRate=sampleRate;//(JACK wants everyone at the same speed)
+#else
+        pJCSound_SCA->sampleRate=48000;//opus wants things to be at 48k
+#endif
+        pJCSound->sampleRate=sampleRate;
+    }
     void SetBufferFrames(int bufferFrames){pJCSound->bufferFrames=bufferFrames;}
     int GetBufferFrames(){return pJCSound->bufferFrames;}
 
