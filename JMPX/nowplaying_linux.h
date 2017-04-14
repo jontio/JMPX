@@ -19,16 +19,17 @@ signals:
 public slots:
 private:
     bool mpris2connect();
-    void mpris2disconnect();
-    void updatesongtitle();
+    void mpris2disconnect(); 
     QDBusInterface *ptr_propiface;
     QDBusServiceWatcher *ptr_watcher;
     QTimer *ptr_timer;
     QString lastmsg;
+    QTimer *watcher_timer_hack;//with vlc when listening to radio "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties" ,"PropertiesChanged" never emits when vlc:nowplaying changes only xesam:title. Why not???. this is a heck to make sure we get these changes
 private slots:
     void mpris2PropertiesChanged(QString interface_name, QVariantMap changed_properties, QStringList invalidated_properties);
     void serviceUnregistered(QString serviceName);
     void checkdbus();
+    void updatesongtitle();
 };
 
 

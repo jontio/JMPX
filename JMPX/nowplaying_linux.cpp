@@ -19,6 +19,9 @@ NowPlaying::NowPlaying(QObject *parent) : QObject(parent)
     ptr_timer->start();
     checkdbus();
 
+    watcher_timer_hack=new QTimer(this);
+    connect(watcher_timer_hack,SIGNAL(timeout()),this,SLOT(updatesongtitle()));
+    watcher_timer_hack->start(4000);
 }
 
 bool NowPlaying::mpris2connect()
