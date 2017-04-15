@@ -6,15 +6,20 @@
 
 #this file always seems to need a few tweaks to get it working right on all platforms. you might have to do a little.
 
+include(../common.pri)
+
 QT       -= gui
 
 TARGET = libJMPX
 TEMPLATE = lib
 
 QMAKE_CXXFLAGS += -std=c++11 -ffast-math
-
 QMAKE_CXXFLAGS_RELEASE -= -O2
 QMAKE_CXXFLAGS_RELEASE += -O3
+
+QMAKE_CFLAGS += -ffast-math
+QMAKE_CFLAGS_RELEASE -= -O2
+QMAKE_CFLAGS_RELEASE += -O3
 
 INCLUDEPATH += ../rtaudio-4.1.2/include \
     ../kiss_fft130
@@ -121,6 +126,21 @@ unix {
     target.path = /usr/lib
     INSTALLS += target
 }
+
+use_build_dir {
+debug {
+    DESTDIR = $$PWD/../build_debug
+print_user_info_msgs {
+    message("using debug build dir")
+}
+} else {
+    DESTDIR = $$PWD/../build
+print_user_info_msgs {
+    message("using release build dir")
+}
+}
+}
+
 
 DISTFILES += \
     LICENSE \

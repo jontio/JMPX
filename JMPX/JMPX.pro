@@ -2,6 +2,8 @@
 # Project created by QtCreator 2015-09-24T05:34:57
 # -------------------------------------------------
 
+include(../common.pri)
+
 QT       += core gui
 
 #needed for MPRIS2 (now playing class on linux)
@@ -61,3 +63,21 @@ HEADERS += nowplaying_mac.h
 SOURCES += nowplaying_mac.cpp
 }
 
+unix {
+    target.path = /usr/bin
+    INSTALLS += target
+}
+
+use_build_dir {
+debug {
+    DESTDIR = $$PWD/../build_debug
+print_user_info_msgs {
+    message("using debug build dir")
+}
+} else {
+    DESTDIR = $$PWD/../build
+print_user_info_msgs {
+    message("using release build dir")
+}
+}
+}

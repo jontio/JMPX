@@ -31,12 +31,13 @@ MainWindow::MainWindow(QWidget *parent) :
     if (!library.load())library.setFileName("../build-libJMPX-Desktop_Qt_5_5_0_MinGW_32bit-Release/release/libJMPX");//me too
     if (!library.load())library.setFileName(QApplication::applicationDirPath()+"/liblibJMPX");
     if (!library.load())library.setFileName(QApplication::applicationDirPath()+"/libJMPX");
+    if (!library.load())library.setFileName("liblibJMPX");
     if (!library.load())library.setFileName("libJMPX");
     if (!library.load())
     {
         qDebug() << library.errorString();
         if(options->quit_on_error)exit(1);
-        QMessageBox::critical(this,"Error","<p><b>Error loading JMPX library.</b></p><p>"+library.errorString()+"</p><p>Note: The JMPX library needs to be placed in the gui's program directory or in system path. On Windows this should be called libJMPX.dll on linux something like libJQAM.so. Please find it and copy it over for JMPX to work.</p>");
+        QMessageBox::critical(this,"Error","<p><b>Error loading JMPX library.</b></p><p>"+library.errorString()+"</p><p>Note: The JMPX library needs to be placed in the gui's program directory or in system path. On Windows this should be called libJMPX.dll on linux something like libJQAM.so. Please find it and copy it over for JMPX to work. If this message say the module can't be found this need not be so and Windows says this about any error. Remember to copy over libopus-0.dll into the path or the application directory too as this message can be due to that too.</p>");
     }
     if (library.load())
     {
