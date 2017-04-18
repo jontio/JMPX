@@ -673,7 +673,7 @@ void Options::pushsetting(JMPXInterface *pJMPX,FileLoader *fileloader)
 
         pJMPX->Active(false);
 
-        pJMPX->SetSampleRate(192000);
+        pJMPX->SetSampleRate(SYSTEM_BITRATE);
         pJMPX->SetSoundCardSCAName(ui->comboBox_soundcard_sca->currentText());
         pJMPX->SetSoundCardInName(ui->comboBox_soundcard_in->currentText());
         pJMPX->SetSoundCardOutName(ui->comboBox_soundcard_out->currentText());
@@ -964,7 +964,7 @@ void Options::on_horizontalSlider_scalevel_valueChanged(int value)
     double noiselevel=((double)ui->horizontalSlider_noise->value())/1000.0;
     double SCA_Level=((double)ui->horizontalSlider_scalevel->value())/1000.0;
     double eb=SCA_Level*SCA_Level/41283.07807;
-    double no=(noiselevel*noiselevel)/192000.0;
+    double no=(noiselevel*noiselevel)/((double)SYSTEM_BITRATE);
     double ebno=10.0*log10(eb/no);
     ui->label_noise->setText(((QString)"EbNo %1 dB OQPSK").arg(ebno,0,'f',1,'0'));
 }
@@ -978,7 +978,7 @@ Q_UNUSED(value);
     double noiselevel=((double)ui->horizontalSlider_noise->value())/1000.0;
     double SCA_Level=((double)ui->horizontalSlider_scalevel->value())/1000.0;
     double eb=SCA_Level*SCA_Level/41283.07807;
-    double no=(noiselevel*noiselevel)/192000.0;
+    double no=(noiselevel*noiselevel)/((double)SYSTEM_BITRATE);
     double ebno=10.0*log10(eb/no);
     ui->label_noise->setText(((QString)"EbNo %1 dB OQPSK").arg(ebno,0,'f',1,'0'));
 }

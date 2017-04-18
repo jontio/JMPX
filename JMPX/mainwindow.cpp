@@ -46,7 +46,7 @@ MainWindow::MainWindow(QWidget *parent) :
         pJMPX = createJMPX(this);
         if(pJMPX)
         {
-            pJMPX->SetSampleRate(192000);
+            pJMPX->SetSampleRate(SYSTEM_BITRATE);
         }
          else
          {
@@ -162,7 +162,7 @@ void MainWindow::on_checkBox_modulate_stateChanged(int state)
     if(!pJMPX)return;
     if((!pJMPX->IsActive())&&(state))
     {
-        pJMPX->SetSampleRate(192000);
+        pJMPX->SetSampleRate(SYSTEM_BITRATE);
     }
     pJMPX->Active(state);
     if((state)&&(pJMPX->GotError()))

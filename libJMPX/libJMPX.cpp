@@ -639,7 +639,7 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int nFrames)
                 if(!SCA_opus)
                 {
                     //SCA input
-                    //upsample from 48000 to 192000
+                    //upsample from 48000 or 96000 to 192000
                     sca_val=0;
                     SCA_ratechange+=1.0;
                     if(SCA_ratechange>=SCA_rate)

@@ -8,6 +8,10 @@
 
 //#define DEV_TAB
 
+#ifndef SYSTEM_BITRATE
+#define SYSTEM_BITRATE 192000
+#endif
+
 namespace Ui {
 class Options;
 }
