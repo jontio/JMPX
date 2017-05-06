@@ -60,8 +60,8 @@ win32 {
 unix {
 #select your wanted sound systems
     DEFINES += __UNIX_JACK__
-    DEFINES += __LINUX_PULSE__
-    DEFINES += __LINUX_ALSA__
+#    DEFINES += __LINUX_PULSE__
+#    DEFINES += __LINUX_ALSA__
 }
 macx {
     DEFINES += __MACOSX_CORE__ \
