@@ -669,6 +669,7 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int nFrames)
             }
             //SCA end
 
+#ifdef DEV_TAB
             // add white noise hack
             if(noiselevel>0)
             {
@@ -677,6 +678,7 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int nFrames)
                 std::normal_distribution<double> dist(mean, stddev);
                 DataOut[i]+=dist(generator);
             }
+#endif
 
             oval=DataOut[i];
             if(compositeclipper)DataOut[i]=clipper.Update(DataOut[i]);
@@ -765,6 +767,7 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int nFrames)
         }
         //SCA end
 
+#ifdef DEV_TAB
         // add white noise hack
         if(noiselevel>0)
         {
@@ -773,6 +776,7 @@ void JMPXEncoder::Update(double *DataIn,double *DataOut, int nFrames)
             std::normal_distribution<double> dist(mean, stddev);
             DataOut[i]+=dist(generator);
         }
+#endif
 
         double oval=DataOut[i];
         if(compositeclipper)DataOut[i]=clipper.Update(DataOut[i]);

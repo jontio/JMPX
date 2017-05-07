@@ -1890,7 +1890,7 @@ const char* RtApiCore :: getErrorCode( OSStatus code )
   //******************** End of __MACOSX_CORE__ *********************//
 #endif
 
-#nif defined(__UNIX_JACK__)
+#if defined(__UNIX_JACK__)
 
 // JACK is a low-latency audio server, originally written for the
 // GNU/Linux operating system and now also ported to OS-X. It can

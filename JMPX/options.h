@@ -6,8 +6,6 @@
 #include "../libJMPX/JMPXInterface.h"
 #include "fileloader.h"
 
-//#define DEV_TAB
-
 #ifndef SYSTEM_BITRATE
 #define SYSTEM_BITRATE 192000
 #endif
