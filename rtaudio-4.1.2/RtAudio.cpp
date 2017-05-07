@@ -1890,7 +1890,7 @@ const char* RtApiCore :: getErrorCode( OSStatus code )
   //******************** End of __MACOSX_CORE__ *********************//
 #endif
 
-#if defined(__UNIX_JACK__)
+#nif defined(__UNIX_JACK__)
 
 // JACK is a low-latency audio server, originally written for the
 // GNU/Linux operating system and now also ported to OS-X. It can
@@ -2124,6 +2124,7 @@ static void jackShutdown( void *infoPointer )
 
 static int jackXrun( void *infoPointer )
 {
+    return 0;//jontio. hack to stop xruns causeing rtaudio to do stack smashing
   JackHandle *handle = (JackHandle *) infoPointer;
 
   if ( handle->ports[0] ) handle->xrun[0] = true;

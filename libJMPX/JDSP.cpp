@@ -551,7 +551,7 @@ int FastFIRFilter::Update(kffsamp_t *data,int Size)
         {
             remainder_ptr-=numfromremainder;
             memcpy ( remainder.data(), remainder.data()+numfromremainder, sizeof(kffsamp_t)*remainder_ptr );
-            qDebug()<<"remainder left";
+            //qDebug()<<"remainder left";
         } else remainder_ptr=0;
     }
 
