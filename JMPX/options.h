@@ -2,6 +2,7 @@
 #define OPTIONS_H
 
 #include <QDialog>
+#include <QAbstractItemView>
 
 #include "../libJMPX/JMPXInterface.h"
 #include "fileloader.h"
