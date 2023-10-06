@@ -1,5 +1,5 @@
 #include "volumemeter.h"
-
+#include <QPainterPath>
 #include <iostream>
 Volumemeter::Volumemeter(QWidget *parent) :
     QWidget(parent)
